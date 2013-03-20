@@ -42,7 +42,7 @@ class MyFrame(wx.Frame):
                 
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
-                self.updateGUI()
+                self.updateGUI(0)
                 self.Show()
            
 
@@ -52,8 +52,9 @@ class MyFrame(wx.Frame):
                                 self.StatusBar.SetStatusText('Starting to collect data')
                                 self.worker=FlareDataWorker(self)                                           
                                 self.StartButton.SetLabel('Stop')
-                        else: self.StatusBar.SetStatusText('Cannot start worker. Already running')
-                elif self.StartButton.GetLabel()== "Stop":
+                        else: self.worker = None
+
+                elif self.StartButton.GetLabel() == "Stop":
                         self.StatusBar.SetStatusText('Ready')
                         self.StartButton.SetLabel('Start')
                 
@@ -68,8 +69,12 @@ class MyFrame(wx.Frame):
                 self.SystemTemperatureValue.SetLabel(str(t.SystemTemp))
                 self.AltitudeValue.SetLabel(str(t.Altitude))
                 self.ParachuteStatusValue.SetLabel(str(t.ParachuteStatus))
-                self.LEDStatusValue.SetLabel(str(t.LEDStatus))
+                if t.LEDStatus:
+                        self.LEDStatusValue.SetLabel(str('ON'))
+                else: self.LEDStatusValue.SetLabel(str('OFF'))
                 self.StatusBar.SetStatusText('Ready')
+                self.updateGUI(0)
+                
         def OnCloseWindow(self,event):
                 self.Destroy()
 
@@ -121,7 +126,9 @@ class MyFrame(wx.Frame):
                 self.StatusBar.SetStatusText('Ready')
                 self.SetTitle('Base Station V1')
 
-        
+                #Update Button
+                self.UpdateButton = wx.Button(panel,label = 'Update GUI',size=(50,15),pos=(100,100))
+                self.Bind(wx.EVT_BUTTON,self.updateGUI,self.UpdateButton)
                 
                         
 
@@ -144,7 +151,7 @@ class MyFrame(wx.Frame):
                         self.ParachuteStatusValue.SetLabel('OPEN')
         def FlareBtnPress(self,evt):
                 self.StatusBar.SetStatusText('Power of The Sun has been turned on')
-        def updateGUI(self):
+        def updateGUI(self,evt):
                         #Update GUI Values
 
                 #Update Box Colours
@@ -186,7 +193,7 @@ class MyFrame(wx.Frame):
                     self.ParachuteStatusValue.SetBackgroundColour('#FF0000')
                 else:
                     self.ParachuteStatusValue.SetBackgroundColour('#00FF00')
-                if self.LEDStatusValue.GetLabel() == 'OFF' : 
+                if self.LEDStatusValue.GetLabel() == "OFF" : 
                     self.LEDStatusValue.SetBackgroundColour('#FF0000')
                 else:
                     self.LEDStatusValue.SetBackgroundColour('#00FF00')
