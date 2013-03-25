@@ -31,7 +31,7 @@ class FlareDataWorker(Thread):
                 #might not need this..
                 foo = 1
         def abort(self):
-                elf._want_abort = 1
+                self._want_abort = 1
         
         
 class MyFrame(wx.Frame):
@@ -52,7 +52,10 @@ class MyFrame(wx.Frame):
                                 self.StatusBar.SetStatusText('Starting to collect data')
                                 self.worker=FlareDataWorker(self)                                           
                                 self.StartButton.SetLabel('Stop')
-                        else: self.worker = None
+                        else :
+                                print "yes?"
+                                
+                     
 
                 elif self.StartButton.GetLabel() == "Stop":
                         self.StatusBar.SetStatusText('Ready')
@@ -68,13 +71,15 @@ class MyFrame(wx.Frame):
                 self.BatteryTemperatureValue.SetLabel(str(t.BatteryTemp))
                 self.SystemTemperatureValue.SetLabel(str(t.SystemTemp))
                 self.AltitudeValue.SetLabel(str(t.Altitude))
-                self.ParachuteStatusValue.SetLabel(str(t.ParachuteStatus))
+                if t.ParachuteStatus:
+                        self.ParachuteStatusValue.SetLabel('OPEN')
+                else: self.ParachuteStatusValue.SetLabel('CLOSE')
                 if t.LEDStatus:
-                        self.LEDStatusValue.SetLabel(str('ON'))
-                else: self.LEDStatusValue.SetLabel(str('OFF'))
+                        self.LEDStatusValue.SetLabel('ON')
+                else: self.LEDStatusValue.SetLabel('OFF')
                 self.StatusBar.SetStatusText('Ready')
                 self.updateGUI(0)
-                
+                       
         def OnCloseWindow(self,event):
                 self.Destroy()
 
@@ -110,11 +115,21 @@ class MyFrame(wx.Frame):
                 self.LEDStatusLabel = wx.StaticText(panel,label='LED Status',style=wx.ALIGN_CENTRE,pos= (300,230))
                 self.LEDStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(450,230),size=(50,15))
                 self.ControlStaticBox = wx.StaticBox(panel,label='Control',pos=(5,20),size=(270,250))
+
+                #Control Parameters
+
                 self.ParachuteLabel = wx.StaticText(panel,label = 'Parachute Status:',pos=(10,42))
                 self.ParachuteBtn = wx.Button(panel,label='Open Parachute',pos=(100,40),size=(100,20))
                 self.FlareLabel = wx.StaticText(panel,label = 'LED Status:',pos=(10,72))
                 self.FlareBtn = wx.Button(panel,label='Turn On',pos=(100,70),size=(50,20))
-
+                self.OptoKineticLabel = wx.StaticText(panel,label = 'Opto-Kinetic Nystagmus Mode',pos=(10,90))
+                self.OptoKineticBtn = wx.Button(panel,label = 'Turn On',pos=(100,90),size=(50,20))
+                #self.LightIntensityLabel =
+                #self.LightIntensityBtn
+                #self.DirectionalityLabel
+                #self.DirectionalityBtn
+                
+                
                 #Event Listeners
                 self.Bind(wx.EVT_BUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
                 self.Bind(wx.EVT_BUTTON,self.FlareBtnPress,self.FlareBtn)
@@ -127,7 +142,7 @@ class MyFrame(wx.Frame):
                 self.SetTitle('Base Station V1')
 
                 #Update Button
-                self.UpdateButton = wx.Button(panel,label = 'Update GUI',size=(50,15),pos=(100,100))
+                self.UpdateButton = wx.Button(panel,label = 'Update GUI',size=(90,20),pos=(375,270))
                 self.Bind(wx.EVT_BUTTON,self.updateGUI,self.UpdateButton)
                 
                         
@@ -157,7 +172,6 @@ class MyFrame(wx.Frame):
                 #Update Box Colours
 
                 #---- ALL OF THE FIGURES HERE ARE ARBITARY ------ 
-
                 if self.BatteryVoltageValue.GetLabel() < '30' : # Slightly cheating here as I'm checking the ASCII value of the label is lower than the ASCII value of '30'. will change it 
                     self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
                 else:
@@ -172,8 +186,7 @@ class MyFrame(wx.Frame):
                     self.BatteryPowerValue.SetBackgroundColour('#00FF00')
                 if self.BatteryDischargesValue.GetLabel() > '50' : 
                     self.BatteryDischargesValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.BatteryDischargesValue.SetBackgroundColour('#00FF00')     
+                else: self.BatteryDischargesValue.SetBackgroundColour('#00FF00')     
                 if self.BatteryTemperatureValue.GetLabel() > '80' : 
                     self.BatteryTemperatureValue.SetBackgroundColour('#FF0000')
                 else:
@@ -189,7 +202,8 @@ class MyFrame(wx.Frame):
                     self.AltitudeValue.SetBackgroundColour('#FF0000')
                 else:
                     self.AltitudeValue.SetBackgroundColour('#00FF00')
-                if self.ParachuteStatusValue.GetLabel() == 'OPEN' : 
+                    
+                if self.ParachuteStatusValue.GetLabel() == 'CLOSE' : 
                     self.ParachuteStatusValue.SetBackgroundColour('#FF0000')
                 else:
                     self.ParachuteStatusValue.SetBackgroundColour('#00FF00')
