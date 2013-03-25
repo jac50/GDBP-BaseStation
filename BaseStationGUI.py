@@ -6,7 +6,7 @@ EVT_RESULT_ID=wx.NewId()
 def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
      
-DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus")                
+DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
 
 class ResultEvent(wx.PyEvent):
         def __init__(self,data):
@@ -19,10 +19,12 @@ class FlareDataWorker(Thread):
                 self.wxObject = wxObject
                 self.start() #starts on creation
         def run(self):
-                self.packet = DataPacket(50,30,1500,2,50,70,800,False,True)
+                self.packet = DataPacket(50,30,1500,2,50,70,800,False,True,True)
                 #Receive Data
                 #unpack packet and add to DataPacket Variable declared above.
-                wx.PostEvent(self.wxObject,ResultEvent(self.packet)) #send to GUI
+                wx.PostEvent(self.wxObject,ResultEvent(self.packet))#send to GUI
+                # wx.PostEvent(self.wxObject,ResultEvent(self.packet)) - when used twice, the colours update. I think text is updating then colour is computed on original numbers
+                
                 
         def unpackPacket(self):
                 #This is the code to decode the data packet
@@ -50,7 +52,7 @@ class MyFrame(wx.Frame):
                 if self.StartButton.GetLabel() == "Start":
                         if not self.worker:
                                 self.StatusBar.SetStatusText('Starting to collect data')
-                                self.worker=FlareDataWorker(self)                                           
+                                self.worker=FlareDataWorker(self)
                                 self.StartButton.SetLabel('Stop')
                         else :
                                 print "yes?"
@@ -77,6 +79,9 @@ class MyFrame(wx.Frame):
                 if t.LEDStatus:
                         self.LEDStatusValue.SetLabel('ON')
                 else: self.LEDStatusValue.SetLabel('OFF')
+                if t.OptoKineticStatus:
+                        self.OptoKineticStatusValue.SetLabel('ON')
+                else: self.OptoKineticStatusValue.SetLabel('OFF')
                 self.StatusBar.SetStatusText('Ready')
                 self.updateGUI(0)
                        
@@ -114,25 +119,27 @@ class MyFrame(wx.Frame):
                 self.SystemStaticBox = wx.StaticBox(panel,label='System Information',pos = (290,150), size=(225,120))
                 self.LEDStatusLabel = wx.StaticText(panel,label='LED Status',style=wx.ALIGN_CENTRE,pos= (300,230))
                 self.LEDStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(450,230),size=(50,15))
+                self.OptoKineticStatusLabel = wx.StaticText(panel,label = 'Optokinetic Nystagmus', style = wx.ALIGN_CENTRE,pos = (300,250))
+                self.OptoKineticStatusValue = wx.StaticText(panel,style = wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE, pos = (450,250), size = (50,15))
                 self.ControlStaticBox = wx.StaticBox(panel,label='Control',pos=(5,20),size=(270,250))
 
                 #Control Parameters
 
-                self.ParachuteLabel = wx.StaticText(panel,label = 'Parachute Status:',pos=(10,42))
-                self.ParachuteBtn = wx.Button(panel,label='Open Parachute',pos=(100,40),size=(100,20))
-                self.FlareLabel = wx.StaticText(panel,label = 'LED Status:',pos=(10,72))
-                self.FlareBtn = wx.Button(panel,label='Turn On',pos=(100,70),size=(50,20))
+                self.ParachuteLabel = wx.StaticText(panel,label = 'Parachute Status:',pos=(10,52))
+                self.ParachuteBtn = wx.Button(panel,label='Open Parachute',pos=(160,50),size=(100,20))
+                self.LEDLabel = wx.StaticText(panel,label = 'LED Status:',pos=(10,72))
+                self.LEDBtn = wx.Button(panel,label='Turn On',pos=(160,70),size=(50,20))
                 self.OptoKineticLabel = wx.StaticText(panel,label = 'Opto-Kinetic Nystagmus Mode',pos=(10,90))
-                self.OptoKineticBtn = wx.Button(panel,label = 'Turn On',pos=(100,90),size=(50,20))
-                #self.LightIntensityLabel =
-                #self.LightIntensityBtn
-                #self.DirectionalityLabel
+                self.OptoKineticBtn = wx.Button(panel,label = 'Turn On',pos=(160,90),size=(50,20))
+                self.LightIntensityLabel = wx.StaticText(panel,label = 'Light Intensity', pos=(10,112))
+                self.LightIntensitySlider = wx.Slider(panel,-1,25,0,100,(160,110),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
+                self.DirectionalityLabel = wx.StaticText(panel,label = 'Directionality', pos=(10,162))
                 #self.DirectionalityBtn
                 
                 
                 #Event Listeners
                 self.Bind(wx.EVT_BUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
-                self.Bind(wx.EVT_BUTTON,self.FlareBtnPress,self.FlareBtn)
+                self.Bind(wx.EVT_BUTTON,self.FlareBtnPress,self.LEDBtn)
                 
                 #Start Button
                 self.StartButton = wx.Button(panel,label = 'Start',pos=(465,270),size=(50,20))
@@ -158,6 +165,7 @@ class MyFrame(wx.Frame):
                 self.AltitudeValue.SetLabel('1000')
                 self.ParachuteStatusValue.SetLabel('CLOSE')
                 self.LEDStatusValue.SetLabel('OFF')
+                self.OptoKineticStatusValue.SetLabel('OFF')
         def ParachuteBtnPress(self,evt):
                 if self.ParachuteStatusValue.GetLabel() == 'OPEN':
                         self.StatusBar.SetStatusText('Parachute is already opened')
@@ -211,6 +219,10 @@ class MyFrame(wx.Frame):
                     self.LEDStatusValue.SetBackgroundColour('#FF0000')
                 else:
                     self.LEDStatusValue.SetBackgroundColour('#00FF00')
+                if self.OptoKineticStatusValue.GetLabel() == "ON":
+                        self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
+                else:
+                        self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
 
 
 if __name__ == '__main__':
