@@ -1,3 +1,4 @@
+# -*- coding: cp1252 -*-
 from threading import *
 import time
 import wx
@@ -104,13 +105,13 @@ class MyFrame(wx.Frame):
                 self.BatteryPowerValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,80),size=(50,15))
                 self.BatteryDischargesLabel = wx.StaticText(panel,label='Number of Discharge Cycles',style=wx.ALIGN_CENTRE,pos = (300,100))
                 self.BatteryDischargesValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,100),size=(50,15))
-                self.BatteryTemperatureLabel = wx.StaticText(panel,label='Temperature (oC)',style=wx.ALIGN_CENTRE, pos = (300,120))
+                self.BatteryTemperatureLabel = wx.StaticText(panel,label='Temperature (°C)',style=wx.ALIGN_CENTRE, pos = (300,120))
                 self.BatteryTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,120),size=(50,15))
                 self.BatteryStaticBox = wx.StaticBox(panel,label = 'Battery Information',pos=(290,20),size=(225,120))
 
                 #System Information
                 
-                self.SystemTemperatureLabel = wx.StaticText(panel,label='System Temperature (oC)',style=wx.ALIGN_CENTRE,pos = (300,170))
+                self.SystemTemperatureLabel = wx.StaticText(panel,label='System Temperature (°C)',style=wx.ALIGN_CENTRE,pos = (300,170))
                 self.SystemTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,170),size=(50,15))
                 self.AltitudeLabel = wx.StaticText(panel,label='Altitude (m)',style=wx.ALIGN_CENTRE,pos = (300,190))
                 self.AltitudeValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,190),size=(50,15))
@@ -133,6 +134,7 @@ class MyFrame(wx.Frame):
                 self.OptoKineticBtn = wx.Button(panel,label = 'Turn On',pos=(160,90),size=(50,20))
                 self.LightIntensityLabel = wx.StaticText(panel,label = 'Light Intensity', pos=(10,112))
                 self.LightIntensitySlider = wx.Slider(panel,-1,25,0,100,(160,110),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
+                self.ightIntensityBtn = wx.Button(panel, label = 'Turn On',pos = (110,110), size = (50,20))
                 self.DirectionalityLabel = wx.StaticText(panel,label = 'Directionality', pos=(10,162))
                 #self.DirectionalityBtn
                 
@@ -152,7 +154,10 @@ class MyFrame(wx.Frame):
                 self.UpdateButton = wx.Button(panel,label = 'Update GUI',size=(90,20),pos=(375,270))
                 self.Bind(wx.EVT_BUTTON,self.updateGUI,self.UpdateButton)
                 
-                        
+                #Map Button
+
+                self.MapButton = wx.Button(panel,label = 'Map', pos=(320,270),size = (50,20))
+                self.Bind(wx.EVT_BUTTON,self.openMap,self.MapButton)
 
         def populateGUI(self):
                 #Temporary Function to initially populate values to test colours etc.
@@ -174,6 +179,8 @@ class MyFrame(wx.Frame):
                         self.ParachuteStatusValue.SetLabel('OPEN')
         def FlareBtnPress(self,evt):
                 self.StatusBar.SetStatusText('Power of The Sun has been turned on')
+        def openMap(self,evt):
+                self.StatusBar.SetStatusText('Test')
         def updateGUI(self,evt):
                         #Update GUI Values
 
@@ -224,7 +231,7 @@ class MyFrame(wx.Frame):
                 else:
                         self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
 
-
+        
 if __name__ == '__main__':
     app = wx.App(0)
     window = MyFrame(None, title = "Base Station V1") 
