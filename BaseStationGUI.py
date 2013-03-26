@@ -46,7 +46,30 @@ class MyFrame(wx.Frame):
                 EVT_RESULT(self,self.updateDisplay)
                 self.updateGUI(0)
                 self.Show() 
-
+        def ParachuteBtnPress(self,evt):
+                if self.ParachuteStatusValue.GetLabel() == "OPEN":
+                        self.StatusBar.SetStatusText('Parachute is already opened')
+                else:
+                        self.StatusBar.SetStatusText('Parachute Deploy Command Sent')
+                        self.ParachuteStatusValue.SetLabel("OPEN")
+        def FlareBtnPress(self,evt):
+                self.StatusBar.SetStatusText('Power of The Sun has been turned on')
+        def OptoKineticBtnPress(self,evt):
+                if self.OptoKineticBtn.GetLabel() == 'OFF':
+                        self.OptoKineticBtn.SetLabel('ON')
+                else:
+                        self.OptoKineticBtn.SetLabel('OFF')
+                self.StatusBar.SetStatus(self.OptoKineticBtn.GetValue())
+        def LightIntensityBtnPress(self,evt):
+                if self.LightIntensityBtn.GetLabel() == "OFF":
+                        self.LightIntensityBtn.SetLabel("ON")
+                else:
+                        self.LightIntensityBtn.SetLabel('OFF')
+                self.StatusBar.SetStatus(self.LightIntensityBtn.GetValue())
+                self.LightIntensitySlider.Disable()
+                self.StatusBar.SetStatus('1')
+        def openMap(self,evt):
+                self.StatusBar.SetStatusText('Test')
         def OnStart(self,event):
                 if self.StartButton.GetLabel() == "Start":
                         if not self.worker:
@@ -59,6 +82,7 @@ class MyFrame(wx.Frame):
                         self.StartButton.SetLabel('Start')
                 
         def updateDisplay(self,msg):
+                self.updateGUI(1)
                 t = msg.data
                 self.StatusBar.SetStatusText('Updating GUI...')
                 self.BatteryVoltageValue.SetLabel(str(t.BatteryVoltage))
@@ -78,7 +102,7 @@ class MyFrame(wx.Frame):
                         self.OptoKineticStatusValue.SetLabel('ON')
                 else: self.OptoKineticStatusValue.SetLabel('OFF')
                 self.StatusBar.SetStatusText('Ready')
-                self.updateGUI(t)
+                self.updateGUI(1)
                        
         def OnCloseWindow(self,event):
                 self.Destroy()
@@ -121,23 +145,22 @@ class MyFrame(wx.Frame):
                 #Control Parameters
 
                 self.ParachuteLabel = wx.StaticText(panel,label = 'Parachute Status:',pos=(10,52))
-                self.ParachuteBtn = wx.ToggleButton(panel,label='OPEN',pos=(160,50),size=(50,20))
+                self.ParachuteBtn = wx.ToggleButton(panel,label='CLOSE',pos=(160,50),size=(50,20))
                 self.LEDLabel = wx.StaticText(panel,label = 'LED Status:',pos=(10,72))
-                self.LEDBtn = wx.ToggleButton(panel,label='On',pos=(160,70),size=(30,20))
+                self.LEDBtn = wx.ToggleButton(panel,label='Turn On',pos=(160,70),size=(30,20))
                 self.OptoKineticLabel = wx.StaticText(panel,label = 'Opto-Kinetic Nystagmus Mode',pos=(10,90))
-                self.OptoKineticBtn = wx.ToggleButton(panel,label = 'On',pos=(160,90),size=(30,20))
+                self.OptoKineticBtn = wx.ToggleButton(panel,label = 'Turn On',pos=(160,90),size=(30,20))
                 self.LightIntensityLabel = wx.StaticText(panel,label = 'Light Intensity', pos=(10,112))
                 self.LightIntensitySlider = wx.Slider(panel,-1,25,0,100,(160,110),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
-                self.LightIntensityBtn = wx.ToggleButton(panel, label = 'On',pos = (110,110), size = (30,20))
                 self.DirectionalityLabel = wx.StaticText(panel,label = 'Directionality', pos=(10,162))
                 self.DirectionalitySlider = wx.Slider(panel,-1,0,-90,90,(160,162),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
                                     
                 #Event Listeners
                 
-                self.Bind(wx.EVT_BUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
-                self.Bind(wx.EVT_BUTTON,self.FlareBtnPress,self.LEDBtn)
-                self.Bind(wx.EVT_BUTTON,self.OptoKineticBtnPress,self.OptoKineticBtn)
-                self.Bind(wx.EVT_BUTTON,self.LightIntensityBtnPress,self.LightIntensityBtn)
+                self.Bind(wx.EVT_TOGGLEBUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
+                self.Bind(wx.EVT_TOGGLEBUTTON,self.FlareBtnPress,self.LEDBtn)
+                self.Bind(wx.EVT_TOGGLEBUTTON,self.OptoKineticBtnPress,self.OptoKineticBtn)
+                self.Bind(wx.EVT_TOGGLEBUTTON,self.LightIntensityBtnPress,self.LightIntensityBtn)
 
                 #Start Button
 
@@ -169,28 +192,7 @@ class MyFrame(wx.Frame):
                 self.ParachuteStatusValue.SetLabel('-')
                 self.LEDStatusValue.SetLabel('-')
                 self.OptoKineticStatusValue.SetLabel('-')
-        def ParachuteBtnPress(self,evt):
-                if self.ParachuteStatusValue.GetLabel() == 'OPEN':
-                        self.StatusBar.SetStatusText('Parachute is already opened')
-                elif self.ParachuteStatusValue.GetLabel() == 'CLOSE':
-                        self.StatusBar.SetStatusText('Parachute Deploy Command Sent')
-                        self.ParachuteStatusValue.SetLabel('OPEN')
-        def FlareBtnPress(self,evt):
-                self.StatusBar.SetStatusText('Power of The Sun has been turned on')
-        def OptoKineticBtnPress(self,evt):
-                if self.OptoKineticBtn.GetLabel() == 'OFF':
-                        self.OptoKineticBtn.SetLabel('ON')
-                else:
-                        self.OptoKineticBtn.SetLabel('OFF')
-                self.StatusBar.SetStatus(self.OptoKineticBtn.GetValue())
-        def LightIntensityBtnPress(self,evt):
-                if self.LightIntensityBtn.GetLabel() == 'OFF':
-                        self.LightIntensityBtn.SetLabel('ON')
-                else:
-                        self.LightIntensityBtn.SetLabel('OFF')
-                self.StatusBar.SetStatus(self.LightIntensityBtn.GetValue())
-        def openMap(self,evt):
-                self.StatusBar.SetStatusText('Test')
+        
         def updateGUI(self,evt):
                         #Update GUI Values
                 
