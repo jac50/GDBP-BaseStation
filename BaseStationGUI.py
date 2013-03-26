@@ -21,11 +21,11 @@ class FlareDataWorker(Thread):
                 self.start() #starts on creation
         def run(self):
                 self.packet = DataPacket(50,30,1500,2,50,70,800,False,True,True)
-                #Receive Data
-                #unpack packet and add to DataPacket Variable declared above.
-                wx.PostEvent(self.wxObject,ResultEvent(self.packet))#send to GUI
-                # wx.PostEvent(self.wxObject,ResultEvent(self.packet)) - when used twice, the colours update. I think text is updating then colour is computed on original numbers
-                
+                while 1:                 
+                        #Receive Data
+                        #unpack packet and add to DataPacket Variable declared above.
+                        wx.PostEvent(self.wxObject,ResultEvent(self.packet))#send to GUI
+                        time.sleep(1)
                 
         def unpackPacket(self):
                 #This is the code to decode the data packet
@@ -42,23 +42,17 @@ class MyFrame(wx.Frame):
                 super(MyFrame,self).__init__(parent,title=title,size=(550,350))
                 self.worker = None # No worker thread yet
                 self.InitUI()
-                
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
                 self.updateGUI(0)
-                self.Show()
-           
+                self.Show() 
 
         def OnStart(self,event):
                 if self.StartButton.GetLabel() == "Start":
                         if not self.worker:
                                 self.StatusBar.SetStatusText('Starting to collect data')
                                 self.worker=FlareDataWorker(self)
-                                self.StartButton.SetLabel('Stop')
-                        else :
-                                print "yes?"
-                                
-                     
+                                self.StartButton.SetLabel('Stop')                                 
 
                 elif self.StartButton.GetLabel() == "Stop":
                         self.StatusBar.SetStatusText('Ready')
@@ -84,7 +78,7 @@ class MyFrame(wx.Frame):
                         self.OptoKineticStatusValue.SetLabel('ON')
                 else: self.OptoKineticStatusValue.SetLabel('OFF')
                 self.StatusBar.SetStatusText('Ready')
-                self.updateGUI(0)
+                self.updateGUI(t)
                        
         def OnCloseWindow(self,event):
                 self.Destroy()
@@ -127,23 +121,26 @@ class MyFrame(wx.Frame):
                 #Control Parameters
 
                 self.ParachuteLabel = wx.StaticText(panel,label = 'Parachute Status:',pos=(10,52))
-                self.ParachuteBtn = wx.Button(panel,label='Open Parachute',pos=(160,50),size=(100,20))
+                self.ParachuteBtn = wx.ToggleButton(panel,label='OPEN',pos=(160,50),size=(50,20))
                 self.LEDLabel = wx.StaticText(panel,label = 'LED Status:',pos=(10,72))
-                self.LEDBtn = wx.Button(panel,label='Turn On',pos=(160,70),size=(50,20))
+                self.LEDBtn = wx.ToggleButton(panel,label='On',pos=(160,70),size=(30,20))
                 self.OptoKineticLabel = wx.StaticText(panel,label = 'Opto-Kinetic Nystagmus Mode',pos=(10,90))
-                self.OptoKineticBtn = wx.Button(panel,label = 'Turn On',pos=(160,90),size=(50,20))
+                self.OptoKineticBtn = wx.ToggleButton(panel,label = 'On',pos=(160,90),size=(30,20))
                 self.LightIntensityLabel = wx.StaticText(panel,label = 'Light Intensity', pos=(10,112))
                 self.LightIntensitySlider = wx.Slider(panel,-1,25,0,100,(160,110),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
-                self.ightIntensityBtn = wx.Button(panel, label = 'Turn On',pos = (110,110), size = (50,20))
+                self.LightIntensityBtn = wx.ToggleButton(panel, label = 'On',pos = (110,110), size = (30,20))
                 self.DirectionalityLabel = wx.StaticText(panel,label = 'Directionality', pos=(10,162))
-                #self.DirectionalityBtn
-                
-                
+                self.DirectionalitySlider = wx.Slider(panel,-1,0,-90,90,(160,162),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
+                                    
                 #Event Listeners
+                
                 self.Bind(wx.EVT_BUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
                 self.Bind(wx.EVT_BUTTON,self.FlareBtnPress,self.LEDBtn)
-                
+                self.Bind(wx.EVT_BUTTON,self.OptoKineticBtnPress,self.OptoKineticBtn)
+                self.Bind(wx.EVT_BUTTON,self.LightIntensityBtnPress,self.LightIntensityBtn)
+
                 #Start Button
+
                 self.StartButton = wx.Button(panel,label = 'Start',pos=(465,270),size=(50,20))
                 self.Bind(wx.EVT_BUTTON,self.OnStart,self.StartButton)
                 self.StatusBar = self.CreateStatusBar()
@@ -151,6 +148,7 @@ class MyFrame(wx.Frame):
                 self.SetTitle('Base Station V1')
 
                 #Update Button
+
                 self.UpdateButton = wx.Button(panel,label = 'Update GUI',size=(90,20),pos=(375,270))
                 self.Bind(wx.EVT_BUTTON,self.updateGUI,self.UpdateButton)
                 
@@ -161,16 +159,16 @@ class MyFrame(wx.Frame):
 
         def populateGUI(self):
                 #Temporary Function to initially populate values to test colours etc.
-                self.BatteryVoltageValue.SetLabel('50')
-                self.BatteryCurrentValue.SetLabel('100')
-                self.BatteryPowerValue.SetLabel('5000')
-                self.BatteryDischargesValue.SetLabel('5')
-                self.BatteryTemperatureValue.SetLabel('40')
-                self.SystemTemperatureValue.SetLabel('35')
-                self.AltitudeValue.SetLabel('1000')
-                self.ParachuteStatusValue.SetLabel('CLOSE')
-                self.LEDStatusValue.SetLabel('OFF')
-                self.OptoKineticStatusValue.SetLabel('OFF')
+                self.BatteryVoltageValue.SetLabel('-')
+                self.BatteryCurrentValue.SetLabel('-')
+                self.BatteryPowerValue.SetLabel('-')
+                self.BatteryDischargesValue.SetLabel('-')
+                self.BatteryTemperatureValue.SetLabel('-')
+                self.SystemTemperatureValue.SetLabel('-')
+                self.AltitudeValue.SetLabel('-')
+                self.ParachuteStatusValue.SetLabel('-')
+                self.LEDStatusValue.SetLabel('-')
+                self.OptoKineticStatusValue.SetLabel('-')
         def ParachuteBtnPress(self,evt):
                 if self.ParachuteStatusValue.GetLabel() == 'OPEN':
                         self.StatusBar.SetStatusText('Parachute is already opened')
@@ -179,11 +177,23 @@ class MyFrame(wx.Frame):
                         self.ParachuteStatusValue.SetLabel('OPEN')
         def FlareBtnPress(self,evt):
                 self.StatusBar.SetStatusText('Power of The Sun has been turned on')
+        def OptoKineticBtnPress(self,evt):
+                if self.OptoKineticBtn.GetLabel() == 'OFF':
+                        self.OptoKineticBtn.SetLabel('ON')
+                else:
+                        self.OptoKineticBtn.SetLabel('OFF')
+                self.StatusBar.SetStatus(self.OptoKineticBtn.GetValue())
+        def LightIntensityBtnPress(self,evt):
+                if self.LightIntensityBtn.GetLabel() == 'OFF':
+                        self.LightIntensityBtn.SetLabel('ON')
+                else:
+                        self.LightIntensityBtn.SetLabel('OFF')
+                self.StatusBar.SetStatus(self.LightIntensityBtn.GetValue())
         def openMap(self,evt):
                 self.StatusBar.SetStatusText('Test')
         def updateGUI(self,evt):
                         #Update GUI Values
-
+                
                 #Update Box Colours
 
                 #---- ALL OF THE FIGURES HERE ARE ARBITARY ------ 
