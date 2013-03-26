@@ -20,7 +20,7 @@ class FlareDataWorker(Thread):
                 self.wxObject = wxObject
                 self.start() #starts on creation
         def run(self):
-                self.packet = DataPacket(50,30,1500,2,50,70,800,False,True,True)
+                self.packet = DataPacket(50,30,1500,2,50,70,800,False,False,False)
                 while 1:                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
@@ -47,29 +47,31 @@ class MyFrame(wx.Frame):
                 self.updateGUI(0)
                 self.Show() 
         def ParachuteBtnPress(self,evt):
-                if self.ParachuteStatusValue.GetLabel() == "OPEN":
+                if self.ParachuteStatusValue.GetLabel() == "CLOSE":
                         self.StatusBar.SetStatusText('Parachute is already opened')
                 else:
                         self.StatusBar.SetStatusText('Parachute Deploy Command Sent')
                         self.ParachuteStatusValue.SetLabel("OPEN")
-        def FlareBtnPress(self,evt):
-                self.StatusBar.SetStatusText('Power of The Sun has been turned on')
+        def LEDBtnPress(self,evt):
+                if self.LEDBtn.GetLabel() == 'Turn On':
+                        self.StatusBar.SetStatusText('Power of The Sun has been turned on')
+                        self.LEDBtn.SetLabel('Turn Off')
+                else:
+                        self.StatusBar.SetStatusText('Power of The Sun has been turned off')
+                        self.LEDBtn.SetLabel('Turn On')
         def OptoKineticBtnPress(self,evt):
-                if self.OptoKineticBtn.GetLabel() == 'OFF':
-                        self.OptoKineticBtn.SetLabel('ON')
+                if self.OptoKineticBtn.GetLabel() == 'Turn On':
+                        # Command Thread
+                        self.StatusBar.SetStatusText('OptoKinetic Nystagmus Mode ON command has been sent')
+                        self.OptoKineticBtn.SetLabel('Turn Off')
                 else:
-                        self.OptoKineticBtn.SetLabel('OFF')
-                self.StatusBar.SetStatus(self.OptoKineticBtn.GetValue())
-        def LightIntensityBtnPress(self,evt):
-                if self.LightIntensityBtn.GetLabel() == "OFF":
-                        self.LightIntensityBtn.SetLabel("ON")
-                else:
-                        self.LightIntensityBtn.SetLabel('OFF')
-                self.StatusBar.SetStatus(self.LightIntensityBtn.GetValue())
-                self.LightIntensitySlider.Disable()
-                self.StatusBar.SetStatus('1')
+                        
+                        self.StatusBar.SetStatusText('OptoKinetic Nystagmus Mode OFF command has been sent')
+                        self.OptoKineticBtn.SetLabel('Turn On')
+   
         def openMap(self,evt):
-                self.StatusBar.SetStatusText('Test')
+                # ------ Need to work on this --------
+                self.StatusBar.SetStatusText('Localisation Map has been opened')
         def OnStart(self,event):
                 if self.StartButton.GetLabel() == "Start":
                         if not self.worker:
@@ -84,7 +86,7 @@ class MyFrame(wx.Frame):
         def updateDisplay(self,msg):
                 self.updateGUI(1)
                 t = msg.data
-                self.StatusBar.SetStatusText('Updating GUI...')
+                self.StatusBar.SetStatusText('Data Received')
                 self.BatteryVoltageValue.SetLabel(str(t.BatteryVoltage))
                 self.BatteryCurrentValue.SetLabel(str(t.BatteryCurrent))
                 self.BatteryPowerValue.SetLabel(str(t.BatteryPower))
@@ -145,11 +147,11 @@ class MyFrame(wx.Frame):
                 #Control Parameters
 
                 self.ParachuteLabel = wx.StaticText(panel,label = 'Parachute Status:',pos=(10,52))
-                self.ParachuteBtn = wx.ToggleButton(panel,label='CLOSE',pos=(160,50),size=(50,20))
+                self.ParachuteBtn = wx.ToggleButton(panel,label='OPEN',pos=(160,50),size=(50,20))
                 self.LEDLabel = wx.StaticText(panel,label = 'LED Status:',pos=(10,72))
-                self.LEDBtn = wx.ToggleButton(panel,label='Turn On',pos=(160,70),size=(30,20))
+                self.LEDBtn = wx.ToggleButton(panel,label='Turn On',pos=(160,70),size=(50,20))
                 self.OptoKineticLabel = wx.StaticText(panel,label = 'Opto-Kinetic Nystagmus Mode',pos=(10,90))
-                self.OptoKineticBtn = wx.ToggleButton(panel,label = 'Turn On',pos=(160,90),size=(30,20))
+                self.OptoKineticBtn = wx.ToggleButton(panel,label = 'Turn On',pos=(160,90),size=(50,20))
                 self.LightIntensityLabel = wx.StaticText(panel,label = 'Light Intensity', pos=(10,112))
                 self.LightIntensitySlider = wx.Slider(panel,-1,25,0,100,(160,110),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
                 self.DirectionalityLabel = wx.StaticText(panel,label = 'Directionality', pos=(10,162))
@@ -158,10 +160,8 @@ class MyFrame(wx.Frame):
                 #Event Listeners
                 
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
-                self.Bind(wx.EVT_TOGGLEBUTTON,self.FlareBtnPress,self.LEDBtn)
+                self.Bind(wx.EVT_TOGGLEBUTTON,self.LEDBtnPress,self.LEDBtn)
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.OptoKineticBtnPress,self.OptoKineticBtn)
-                self.Bind(wx.EVT_TOGGLEBUTTON,self.LightIntensityBtnPress,self.LightIntensityBtn)
-
                 #Start Button
 
                 self.StartButton = wx.Button(panel,label = 'Start',pos=(465,270),size=(50,20))
