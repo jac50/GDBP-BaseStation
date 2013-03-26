@@ -8,7 +8,7 @@ Version 1.1.1 (26th March 2013)
 - Added Directionality Slider from -90 to 90, default to 0
 - Buttons changed from Turn On to On
 - Changed initial values to a -
-- Fixed # 1
+- Fixed # 1 and #4
 
 
 Version 1.1.0 (26th March 2013)
