@@ -4,52 +4,75 @@ import time
 import wx
 from collections import namedtuple
 EVT_RESULT_ID=wx.NewId()
+EVT_CONTROL_ID = wx.NewId()
+DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
 def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
-     
-DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
-
+def EVT_CONTROL(win,func):        
+        win.Connect(-1,01,EVT_CONTROL_ID,func)
 class ResultEvent(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_RESULT_ID)
                 self.data = data
 class FlareDataWorker(Thread):
+        ExitCode = 0
+        CurrentPacket = DataPacket(50,30,1500,2,50,70,800,False,False,False)
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
-                self.start() #starts on creation
+                self.start()
+                self.ExitCode = 0
         def run(self):
-                self.packet = DataPacket(50,30,1500,2,50,70,800,False,False,False)
-                while 1:                 
+                self.packet = DataPacket(60,30,1500,2,50,70,800,False,False,False)
+                while (self.ExitCode == 0):                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
                         wx.PostEvent(self.wxObject,ResultEvent(self.packet))#send to GUI
                         time.sleep(1)
+                        
                 
-        def unpackPacket(self):
+        def UnpackPacket(self):
                 #This is the code to decode the data packet
                 foo = 1
         def RequestForData(self):
                 #might not need this..
                 foo = 1
-        def abort(self):
-                self._want_abort = 1
-        
+                def Abort(self):
+                self.ExitCode = 1
+class ControlWorker(Thread):
+        def __init__(self,wxObject):
+                Thread.__init__(self)
+                self.wxOBject = wxObject
+                self.args = args
+                self.start()
+        def run(self):
+                print("Test\n")
+                print (self.args)
+        def PackPacket(self):
+                #Pack Packet here        
+                foo = 1
         
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
                 super(MyFrame,self).__init__(parent,title=title,size=(550,350))
                 self.worker = None # No worker thread yet
+                self.ParachuteControl = None
                 self.InitUI()
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
+                EVT_CONTROL(self,self.Worked)
                 self.updateGUI(0)
                 self.Show() 
+        def Worked(self,evt):
+                print "hello?"
+        
         def ParachuteBtnPress(self,evt):
                 if self.ParachuteStatusValue.GetLabel() == "CLOSE":
                         self.StatusBar.SetStatusText('Parachute is already opened')
                 else:
+                        self.ParachuteControl = ControlWorker(self,5)
+                        self.ParachuteControl.start()
                         self.StatusBar.SetStatusText('Parachute Deploy Command Sent')
                         self.ParachuteStatusValue.SetLabel("OPEN")
         def LEDBtnPress(self,evt):
@@ -77,10 +100,11 @@ class MyFrame(wx.Frame):
                         if not self.worker:
                                 self.StatusBar.SetStatusText('Starting to collect data')
                                 self.worker=FlareDataWorker(self)
-                                self.StartButton.SetLabel('Stop')                                 
-
+                                self.StartButton.SetLabel('Stop')                                               
                 elif self.StartButton.GetLabel() == "Stop":
-                        self.StatusBar.SetStatusText('Ready')
+                        self.StatusBar.SetStatusText('Updating Stopped')
+                        self.worker.Abort()
+                        self.worker = None
                         self.StartButton.SetLabel('Start')
                 
         def updateDisplay(self,msg):
@@ -107,6 +131,7 @@ class MyFrame(wx.Frame):
                 self.updateGUI(1)
                        
         def OnCloseWindow(self,event):
+                self.worker.Abort()
                 self.Destroy()
 
         def InitUI(self):

@@ -1,13 +1,19 @@
 GDBP Base Station Program Change Log
 ====================================
 
+Version 1.1.2 (27th March 2013)
+-------------------------------
+
+- Ability to Start and Stop Updating now works.
+- Added a Control Worker to handle control operations (not complete)
+
 Version 1.1.1 (26th March 2013)
 -----------------------------
 
 - Changed Buttons to ToggleButtons
 - Added Directionality Slider from -90 to 90, default to 0
 - Buttons changed from Turn On to On
-- Changed initial values to a -
+- Changed initial values to a '-'
 - Fixed # 1 and #4
 
 
