@@ -3,7 +3,8 @@ from threading import *
 import time
 import wx
 from collections import namedtuple
-import packet as module
+#import usb
+#import packet
 EVT_RESULT_ID=wx.NewId()
 EVT_CONTROL_ID = wx.NewId()
 DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
@@ -39,8 +40,7 @@ class FlareDataWorker(Thread):
                         self.UnpackPacket()
                         self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         wx.PostEvent(self.wxObject,ResultEvent(self.FlareData))#send to GUI                                                  
-                        time.sleep(1)
-                        
+                        time.sleep(1)       
                 
         
                 
@@ -214,6 +214,9 @@ class MyFrame(wx.Frame):
                 self.MapButton = wx.Button(panel,label = 'Map', pos=(320,270),size = (50,20))
                 self.Bind(wx.EVT_BUTTON,self.openMap,self.MapButton)
 
+                #Connection Status
+                self.ConnectionStatusLabel = wx.StaticText(panel,label = 'Connection Status:',pos=(370,5))
+                self.ConnectionStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(465,5),size=(50,15))
         def populateGUI(self):
                 #Temporary Function to initially populate values to test colours etc.
                 self.BatteryVoltageValue.SetLabel('-')
