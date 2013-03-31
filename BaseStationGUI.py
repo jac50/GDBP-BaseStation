@@ -3,9 +3,11 @@ from threading import *
 import time
 import wx
 from collections import namedtuple
+import packet as module
 EVT_RESULT_ID=wx.NewId()
 EVT_CONTROL_ID = wx.NewId()
 DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
+
 def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
 def EVT_CONTROL(win,func):        
@@ -17,28 +19,35 @@ class ResultEvent(wx.PyEvent):
                 self.data = data
 class FlareDataWorker(Thread):
         ExitCode = 0
-        CurrentPacket = DataPacket(50,30,1500,2,50,70,800,False,False,False)
+        FlareData = DataPacket(40,30,1500,2,50,70,800,False,False,False)
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
                 self.start()
                 self.ExitCode = 0
+        def UnpackPacket(self):
+                # This is the code to decode the data packet
+                # Used to edit the FlareData packet for testing
+                foo = 1
+                        
         def run(self):
+                x = 0
                 self.packet = DataPacket(60,30,1500,2,50,70,800,False,False,False)
                 while (self.ExitCode == 0):                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
-                        wx.PostEvent(self.wxObject,ResultEvent(self.packet))#send to GUI
+                        self.UnpackPacket()
+                        self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
+                        wx.PostEvent(self.wxObject,ResultEvent(self.FlareData))#send to GUI                                                  
                         time.sleep(1)
                         
                 
-        def UnpackPacket(self):
-                #This is the code to decode the data packet
-                foo = 1
+        
+                
         def RequestForData(self):
                 #might not need this..
                 foo = 1
-                def Abort(self):
+        def Abort(self):
                 self.ExitCode = 1
 class ControlWorker(Thread):
         def __init__(self,wxObject):
