@@ -8,7 +8,7 @@ from collections import namedtuple
 EVT_RESULT_ID=wx.NewId()
 EVT_CONTROL_ID = wx.NewId()
 DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
-
+ControlParameters = namedtuple("ControlParameters", "LEDCommand ParachuteCommand OptoKinetic LightIntensity Directionality")
 def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
 def EVT_CONTROL(win,func):        
@@ -49,14 +49,14 @@ class FlareDataWorker(Thread):
         def Abort(self):
                 self.ExitCode = 1
 class ControlWorker(Thread):
-        def __init__(self,wxObject):
+        def __init__(self,wxObject,args):
                 Thread.__init__(self)
                 self.wxOBject = wxObject
-                self.args = args
+                self.commands = args
                 self.start()
         def run(self):
                 print("Test\n")
-                print (self.args)
+                print (self.commands.LEDCommand)
         def PackPacket(self):
                 #Pack Packet here        
                 foo = 1
@@ -65,26 +65,22 @@ class MyFrame(wx.Frame):
         def __init__(self,parent,title):
                 super(MyFrame,self).__init__(parent,title=title,size=(550,350))
                 self.worker = None # No worker thread yet
-                self.ParachuteControl = None
+                self.controlparameters = ControlParameters(False,False,False,0,0)
                 self.InitUI()
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
-                EVT_CONTROL(self,self.Worked)
                 self.updateGUI(0)
                 self.Show() 
-        def Worked(self,evt):
-                print "hello?"
         
         def ParachuteBtnPress(self,evt):
-                if self.ParachuteStatusValue.GetLabel() == "CLOSE":
+                if self.ParachuteStatusValue.GetLabel() == "OPEN":
                         self.StatusBar.SetStatusText('Parachute is already opened')
                 else:
-                        self.ParachuteControl = ControlWorker(self,5)
-                        self.ParachuteControl.start()
-                        self.StatusBar.SetStatusText('Parachute Deploy Command Sent')
-                        self.ParachuteStatusValue.SetLabel("OPEN")
+                        self.controlparameters = self.controlparameters._replace(ParachuteCommand = True)
+                        self.StatusBar.SetStatusText('Parachute Deploy Command primed')
         def LEDBtnPress(self,evt):
                 if self.LEDBtn.GetLabel() == 'Turn On':
+                        self.controlparameters = self.controlparameters._replace(LEDCommand = True)
                         self.StatusBar.SetStatusText('Power of The Sun has been turned on')
                         self.LEDBtn.SetLabel('Turn Off')
                 else:
@@ -92,7 +88,7 @@ class MyFrame(wx.Frame):
                         self.LEDBtn.SetLabel('Turn On')
         def OptoKineticBtnPress(self,evt):
                 if self.OptoKineticBtn.GetLabel() == 'Turn On':
-                        # Command Thread
+                        self.controlparameters = self.controlparameters._replace(OptoKinetic = True)
                         self.StatusBar.SetStatusText('OptoKinetic Nystagmus Mode ON command has been sent')
                         self.OptoKineticBtn.SetLabel('Turn Off')
                 else:
@@ -114,7 +110,10 @@ class MyFrame(wx.Frame):
                         self.worker.Abort()
                         self.worker = None
                         self.StartButton.SetLabel('Start')
-                
+        def LightIntensitySliderUpdate(self,evt):
+                self.controlparameters = self.controlparameters._replace(LightIntensity = self.LightIntensitySlider.GetValue())
+        def DirectionalitySliderUpdate(self,evt):
+                self.controlparameters = self.controlparameters._replace(Directionality = self.DirectionalitySlider.GetValue())
         def updateDisplay(self,msg):
                 self.updateGUI(1)
                 t = msg.data
@@ -137,7 +136,11 @@ class MyFrame(wx.Frame):
                 else: self.OptoKineticStatusValue.SetLabel('OFF')
                 self.StatusBar.SetStatusText('Ready')
                 self.updateGUI(1)
-                       
+        def SendCommandFnc(self,evt):
+                self.StatusBar.SetStatusText('Collating Commands to Send')                
+                self.controlthread = ControlWorker(self,self.controlparameters)
+                self.StatusBar.SetStatusText('Commands Sent to Background Thread')
+                
         def OnCloseWindow(self,event):
                 self.worker.Abort()
                 self.Destroy()
@@ -195,6 +198,8 @@ class MyFrame(wx.Frame):
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.LEDBtnPress,self.LEDBtn)
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.OptoKineticBtnPress,self.OptoKineticBtn)
+                self.Bind(wx.EVT_SLIDER,self.LightIntensitySliderUpdate,self.LightIntensitySlider)
+                self.Bind(wx.EVT_SLIDER,self.DirectionalitySliderUpdate,self.DirectionalitySlider)
                 #Start Button
 
                 self.StartButton = wx.Button(panel,label = 'Start',pos=(465,270),size=(50,20))
@@ -216,6 +221,11 @@ class MyFrame(wx.Frame):
                 #Connection Status
                 self.ConnectionStatusLabel = wx.StaticText(panel,label = 'Connection Status:',pos=(370,5))
                 self.ConnectionStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(465,5),size=(50,15))
+
+                #Send Commands Button
+
+                self.SendCommandBtn = wx.Button(panel,label = 'Send Commands',pos = (170,240),size = (100,20))
+                self.Bind(wx.EVT_BUTTON,self.SendCommandFnc,self.SendCommandBtn)
         def populateGUI(self):
                 #Temporary Function to initially populate values to test colours etc.
                 self.BatteryVoltageValue.SetLabel('-')
