@@ -23,9 +23,10 @@ class UpdateStatusEvent(wx.PyEvent):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_UPDATESTATUS_ID)
                 self.data = data
+                
 class FlareDataWorker(Thread):
         ExitCode = 0
-        FlareData = DataPacket(40,30,1500,2,50,70,800,False,False,False)
+        FlareData = DataPacket(40,30,1200,2,50,70,800,False,False,False)
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -38,7 +39,6 @@ class FlareDataWorker(Thread):
                         
         def run(self):
                 x = 0
-                self.packet = DataPacket(60,30,1500,2,50,70,800,False,False,False)
                 while (self.ExitCode == 0):                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
@@ -94,6 +94,7 @@ class MyFrame(wx.Frame):
                         self.StatusBar.SetStatusText('Power of The Sun has been turned on')
                         self.LEDBtn.SetLabel('Turn Off')
                 else:
+                        self.controlparameters = self.controlparameters._replace(LEDCommand = False)
                         self.StatusBar.SetStatusText('Power of The Sun has been turned off')
                         self.LEDBtn.SetLabel('Turn On')
         def OptoKineticBtnPress(self,evt):
@@ -102,7 +103,7 @@ class MyFrame(wx.Frame):
                         self.StatusBar.SetStatusText('OptoKinetic Nystagmus Mode ON command has been sent')
                         self.OptoKineticBtn.SetLabel('Turn Off')
                 else:
-                        
+                        self.controlparameters = self.controlparameters._replace(OptoKinetic = False)
                         self.StatusBar.SetStatusText('OptoKinetic Nystagmus Mode OFF command has been sent')
                         self.OptoKineticBtn.SetLabel('Turn On')
    
@@ -230,8 +231,8 @@ class MyFrame(wx.Frame):
                 self.Bind(wx.EVT_BUTTON,self.openMap,self.MapButton)
 
                 #Connection Status
-                self.ConnectionStatusLabel = wx.StaticText(panel,label = 'Connection Status:',pos=(370,5))
-                self.ConnectionStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(465,5),size=(50,15))
+                self.ConnectionStatusLabel = wx.StaticText(panel,label = 'Connection Status:',pos=(320,5))
+                self.ConnectionStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(420,5),size=(100,15))
 
                 #Send Commands Button
 
@@ -249,15 +250,16 @@ class MyFrame(wx.Frame):
                 self.ParachuteStatusValue.SetLabel('-')
                 self.LEDStatusValue.SetLabel('-')
                 self.OptoKineticStatusValue.SetLabel('-')
+                self.ConnectionStatusValue.SetLabel('Not Connected')
+                
         
         def updateGUI(self,evt):
-                        #Update GUI Values
                 
                 #Update Box Colours
                 
                 #---- ALL OF THE FIGURES HERE ARE ARBITARY ------ 
                 if self.BatteryVoltageValue.GetLabel() !='-':
-                        if int(self.BatteryVoltageValue.GetLabel()) < 30 : # Slightly cheating here as I'm checking the ASCII value of the label is lower than the ASCII value of '30'. will change it 
+                        if int(self.BatteryVoltageValue.GetLabel()) < 30 :  
                                 self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.BatteryVoltageValue.SetBackgroundColour('#00FF00')
@@ -308,6 +310,10 @@ class MyFrame(wx.Frame):
                                 self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
                         else:
                                 self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
+                if self.ConnectionStatusValue.GetLabel() == "Not Connected":
+                        self.ConnectionStatusValue.SetBackgroundColour('#FF0000')
+                else:
+                        self.ConnectionStatusValue.SetBackgroundColour('#00FF00')
 
         
 if __name__ == '__main__':
