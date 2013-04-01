@@ -40,8 +40,7 @@ class FlareDataWorker(Thread):
                         self.UnpackPacket()
                         self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         wx.PostEvent(self.wxObject,ResultEvent(self.FlareData))#send to GUI                                                  
-                        time.sleep(1)       
-                
+                        time.sleep(1)                   
         
                 
         def RequestForData(self):
@@ -234,51 +233,60 @@ class MyFrame(wx.Frame):
                         #Update GUI Values
                 
                 #Update Box Colours
-
+                
                 #---- ALL OF THE FIGURES HERE ARE ARBITARY ------ 
-                if self.BatteryVoltageValue.GetLabel() < '30' : # Slightly cheating here as I'm checking the ASCII value of the label is lower than the ASCII value of '30'. will change it 
-                    self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.BatteryVoltageValue.SetBackgroundColour('#00FF00')
-                if self.BatteryCurrentValue.GetLabel() > '200' : 
-                    self.BatteryCurrentValue.SetBackgroundColour('#FF0000')
-                else:   
-                    self.BatteryCurrentValue.SetBackgroundColour('#00FF00')
-                if self.BatteryPowerValue.GetLabel() < '1000000' : 
-                    self.BatteryPowerValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.BatteryPowerValue.SetBackgroundColour('#00FF00')
-                if self.BatteryDischargesValue.GetLabel() > '50' : 
-                    self.BatteryDischargesValue.SetBackgroundColour('#FF0000')
-                else: self.BatteryDischargesValue.SetBackgroundColour('#00FF00')     
-                if self.BatteryTemperatureValue.GetLabel() > '80' : 
-                    self.BatteryTemperatureValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.BatteryTemperatureValue.SetBackgroundColour('#00FF00')
-                if self.SystemTemperatureValue.GetLabel() > '60' : 
-                    self.SystemTemperatureValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.SystemTemperatureValue.SetBackgroundColour('#00FF00')
+                if self.BatteryVoltageValue.GetLabel() !='-':
+                        if int(self.BatteryVoltageValue.GetLabel()) < 30 : # Slightly cheating here as I'm checking the ASCII value of the label is lower than the ASCII value of '30'. will change it 
+                                self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.BatteryVoltageValue.SetBackgroundColour('#00FF00')
+                if self.BatteryCurrentValue.GetLabel() !='-':
+                        if int(self.BatteryCurrentValue.GetLabel()) > 200 : 
+                                self.BatteryCurrentValue.SetBackgroundColour('#FF0000')
+                        else:   
+                                self.BatteryCurrentValue.SetBackgroundColour('#00FF00')
+                if self.BatteryPowerValue.GetLabel() != '-':
+                        if int(self.BatteryPowerValue.GetLabel()) < 1000000 : 
+                                self.BatteryPowerValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.BatteryPowerValue.SetBackgroundColour('#00FF00')
+                if self.BatteryDischargesValue.GetLabel() !='-':
+                        if int(self.BatteryDischargesValue.GetLabel()) > 50 : 
+                                self.BatteryDischargesValue.SetBackgroundColour('#FF0000')
+                        else: self.BatteryDischargesValue.SetBackgroundColour('#00FF00')     
+                if self.BatteryTemperatureValue.GetLabel() != '-':
+                        if int(self.BatteryTemperatureValue.GetLabel()) > 80 : 
+                                self.BatteryTemperatureValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.BatteryTemperatureValue.SetBackgroundColour('#00FF00')
+                if self.SystemTemperatureValue.GetLabel() != '-':
+                        if int(self.SystemTemperatureValue.GetLabel()) > 60 : 
+                                self.SystemTemperatureValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.SystemTemperatureValue.SetBackgroundColour('#00FF00')
 
                 #Altitude Value - This needs to be adapted so the value colour will only change to red if the flare is in at an incorrect altitude (IE parachute not launched and rapidly falling)
+                if self.AltitudeValue.GetLabel()!='-':
+                        if int(self.AltitudeValue.GetLabel()) < 10 : 
+                                self.AltitudeValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.AltitudeValue.SetBackgroundColour('#00FF00')
                     
-                if self.AltitudeValue.GetLabel() < '10' : 
-                    self.AltitudeValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.AltitudeValue.SetBackgroundColour('#00FF00')
-                    
-                if self.ParachuteStatusValue.GetLabel() == 'CLOSE' : 
-                    self.ParachuteStatusValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.ParachuteStatusValue.SetBackgroundColour('#00FF00')
-                if self.LEDStatusValue.GetLabel() == "OFF" : 
-                    self.LEDStatusValue.SetBackgroundColour('#FF0000')
-                else:
-                    self.LEDStatusValue.SetBackgroundColour('#00FF00')
-                if self.OptoKineticStatusValue.GetLabel() == "ON":
-                        self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
-                else:
-                        self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
+                if self.ParachuteStatusValue.GetLabel()!='-':
+                        if self.ParachuteStatusValue.GetLabel() == 'CLOSE' : 
+                                self.ParachuteStatusValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.ParachuteStatusValue.SetBackgroundColour('#00FF00')
+                if self.LEDStatusValue.GetLabel()!='-':
+                        if self.LEDStatusValue.GetLabel() == "OFF" : 
+                                self.LEDStatusValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.LEDStatusValue.SetBackgroundColour('#00FF00')
+                if self.OptoKineticStatusValue.GetLabel()!='-':
+                        if self.OptoKineticStatusValue.GetLabel() == "ON":
+                                self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
+                        else:
+                                self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
 
         
 if __name__ == '__main__':
