@@ -6,17 +6,22 @@ from collections import namedtuple
 #import usb
 #import packet
 EVT_RESULT_ID=wx.NewId()
-EVT_CONTROL_ID = wx.NewId()
+EVT_UPDATESTATUS_ID = wx.NewId()
 DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand ParachuteCommand OptoKinetic LightIntensity Directionality")
 def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
-def EVT_CONTROL(win,func):        
-        win.Connect(-1,01,EVT_CONTROL_ID,func)
+def EVT_UPDATESTATUS(win,func):        
+        win.Connect(-1,01,EVT_UPDATESTATUS_ID,func)
 class ResultEvent(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_RESULT_ID)
+                self.data = data
+class UpdateStatusEvent(wx.PyEvent):
+        def __init__(self,data):
+                wx.PyEvent.__init__(self)
+                self.SetEventType(EVT_UPDATESTATUS_ID)
                 self.data = data
 class FlareDataWorker(Thread):
         ExitCode = 0
@@ -51,16 +56,18 @@ class FlareDataWorker(Thread):
 class ControlWorker(Thread):
         def __init__(self,wxObject,args):
                 Thread.__init__(self)
-                self.wxOBject = wxObject
+                self.wxObject = wxObject
                 self.commands = args
                 self.start()
         def run(self):
-                print("Test\n")
-                print (self.commands.LEDCommand)
+                wx.PostEvent(self.wxObject,UpdateStatusEvent("Packing Packet"))
+                self.PackPacket()
+                wx.PostEvent(self.wxObject,UpdateStatusEvent("Sending Packet"))
+                
         def PackPacket(self):
-                #Pack Packet here        
-                foo = 1
-        
+                #Pack Packet here
+                #Use import packet to pack the packet. or maybe do it myself.
+                time.sleep(0.5)
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
                 super(MyFrame,self).__init__(parent,title=title,size=(550,350))
@@ -69,9 +76,12 @@ class MyFrame(wx.Frame):
                 self.InitUI()
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
+                EVT_UPDATESTATUS(self,self.UpdateStatus)
                 self.updateGUI(0)
                 self.Show() 
-        
+        def UpdateStatus(self,msg):
+                t = msg.data
+                self.StatusBar.SetStatusText(t)
         def ParachuteBtnPress(self,evt):
                 if self.ParachuteStatusValue.GetLabel() == "OPEN":
                         self.StatusBar.SetStatusText('Parachute is already opened')
@@ -143,6 +153,7 @@ class MyFrame(wx.Frame):
                 
         def OnCloseWindow(self,event):
                 self.worker.Abort()
+                self.controlthread.Abort()
                 self.Destroy()
 
         def InitUI(self):
