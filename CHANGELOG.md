@@ -1,6 +1,10 @@
 GDBP Base Station Program Change Log
 ====================================
 
+Version 1.1.4 (April 3rd 2013)
+------------------------------
+
+-Sizers Code Have been Added to a new branch (in progress)
 Version 1.1.3 (April 1st 2013)
 ------------------------------
 
