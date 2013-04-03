@@ -1,6 +1,12 @@
 GDBP Base Station Program Change Log
 ====================================
 
+Version 1.1.3 (April 1st 2013)
+------------------------------
+
+- Control Worker has been completed and works successfully
+- Connection Status has been added
+
 Version 1.1.2 (27th March 2013)
 -------------------------------
 
