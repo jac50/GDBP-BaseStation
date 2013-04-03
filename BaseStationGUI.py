@@ -70,7 +70,7 @@ class ControlWorker(Thread):
                 time.sleep(0.5)
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
-                super(MyFrame,self).__init__(parent,title=title,size=(550,330),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+                super(MyFrame,self).__init__(parent,title=title,size=(550,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
                 self.worker = None # No worker thread yet
                 self.controlparameters = ControlParameters(False,False,False,0,0)
                 self.InitUI()
@@ -162,94 +162,94 @@ class MyFrame(wx.Frame):
                 panel.SetBackgroundColour('#FFFFFF')
                 
                 #---- Need Title and Image -----
-                standardfont = wx.Font(10,wx.SWISS,wx.NORMAL,wx.NORMAL)
+                standardfont = wx.Font(8,wx.SWISS,wx.NORMAL,wx.NORMAL)
                 #Battery Information
 		
-		self.BatteryStaticBox = wx.StaticBox(panel,label = 'Battery Information',pos=(290,20),size=(225,120))
+                self.BatteryStaticBox = wx.StaticBox(panel,label = 'Battery Information',pos=(290,20),size=(225,120))
                 self.BatteryVoltageLabel = wx.StaticText(panel,label='Voltage (V)',style=wx.ALIGN_CENTRE,pos=(300,40))
-		self.BatteryVoltageValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(490,40),size=(50,15))
+                self.BatteryVoltageValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,40),size=(50,15))
                 self.BatteryCurrentLabel = wx.StaticText(panel,label='Current (I)',style=wx.ALIGN_CENTRE,pos=(300,60))
-                self.BatteryCurrentValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(490,60),size=(50,15))
+                self.BatteryCurrentValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,60),size=(50,15))
                 self.BatteryPowerLabel = wx.StaticText(panel,label='Power (W)', style=wx.ALIGN_CENTRE,pos = (300,80))
-                self.BatteryPowerValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(480,80),size=(50,15))
+                self.BatteryPowerValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,80),size=(50,15))
                 self.BatteryDischargesLabel = wx.StaticText(panel,label='Number of Discharge Cycles',style=wx.ALIGN_CENTRE,pos = (300,100))
-                self.BatteryDischargesValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(490,100),size=(50,15))
+                self.BatteryDischargesValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,100),size=(50,15))
                 self.BatteryTemperatureLabel = wx.StaticText(panel,label='Temperature (C)',style=wx.ALIGN_CENTRE, pos = (300,120))
-                self.BatteryTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(490,120),size=(50,15))
+                self.BatteryTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,120),size=(50,15))
                 
-		self.BatteryVoltageLabel.SetFont(standardfont)
-		self.BatteryVoltageValue.SetFont(standardfont)
-		self.BatteryCurrentLabel.SetFont(standardfont)
-		self.BatteryCurrentValue.SetFont(standardfont)
-		self.BatteryPowerLabel.SetFont(standardfont)
-		self.BatteryPowerValue.SetFont(standardfont)
-		self.BatteryDischargesLabel.SetFont(standardfont)
-		self.BatteryDischargesValue.SetFont(standardfont)
-		self.BatteryTemperatureLabel.SetFont(standardfont)
-		self.BatteryTemperatureValue.SetFont(standardfont)
-		
-		
+                self.BatteryVoltageLabel.SetFont(standardfont)
+                self.BatteryVoltageValue.SetFont(standardfont)
+                self.BatteryCurrentLabel.SetFont(standardfont)
+                self.BatteryCurrentValue.SetFont(standardfont)
+                self.BatteryPowerLabel.SetFont(standardfont)
+                self.BatteryPowerValue.SetFont(standardfont)
+                self.BatteryDischargesLabel.SetFont(standardfont)
+                self.BatteryDischargesValue.SetFont(standardfont)
+                self.BatteryTemperatureLabel.SetFont(standardfont)
+                self.BatteryTemperatureValue.SetFont(standardfont)
+                
+                
                 #System Information
                 self.ControlStaticBox = wx.StaticBox(panel,label='Control',pos=(5,20),size=(270,250))
                 self.SystemTemperatureLabel = wx.StaticText(panel,label='System Temperature (C)',style=wx.ALIGN_CENTRE,pos = (300,170))
-                self.SystemTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(490,170),size=(50,15))
+                self.SystemTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,170),size=(50,15))
                 self.AltitudeLabel = wx.StaticText(panel,label='Altitude (m)',style=wx.ALIGN_CENTRE,pos = (300,190))
-                self.AltitudeValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(490,190),size=(50,15))
+                self.AltitudeValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,190),size=(50,15))
                 self.ParachuteStatusLabel = wx.StaticText(panel,label='Parachute Status',style=wx.ALIGN_CENTRE, pos = (300,210))
-                self.ParachuteStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(490,210),size=(50,15))
+                self.ParachuteStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,210),size=(50,15))
                 self.SystemStaticBox = wx.StaticBox(panel,label='System Information',pos = (290,150), size=(225,120))
                 self.LEDStatusLabel = wx.StaticText(panel,label='LED Status',style=wx.ALIGN_CENTRE,pos= (300,230))
-                self.LEDStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(490,230),size=(50,15))
+                self.LEDStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(450,230),size=(50,15))
                 self.OptoKineticStatusLabel = wx.StaticText(panel,label = 'Optokinetic Nystagmus', style = wx.ALIGN_CENTRE,pos = (300,250))
-                self.OptoKineticStatusValue = wx.StaticText(panel,style = wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE, pos = (490,250), size = (50,15))
+                self.OptoKineticStatusValue = wx.StaticText(panel,style = wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE, pos = (450,250), size = (50,15))
                 
-		self.SystemTemperatureLabel.SetFont(standardfont)
-		self.SystemTemperatureValue.SetFont(standardfont)
-		self.AltitudeLabel.SetFont(standardfont)
-		self.AltitudeValue.SetFont(standardfont)
-		self.ParachuteStatusLabel.SetFont(standardfont)
-		self.ParachuteStatusValue.SetFont(standardfont)
-		self.LEDStatusLabel.SetFont(standardfont)
-		self.LEDStatusValue.SetFont(standardfont)
-		self.SystemTemperatureLabel.SetFont(standardfont)
-		self.SystemTemperatureValue.SetFont(standardfont)
+                self.SystemTemperatureLabel.SetFont(standardfont)
+                self.SystemTemperatureValue.SetFont(standardfont)
+                self.AltitudeLabel.SetFont(standardfont)
+                self.AltitudeValue.SetFont(standardfont)
+                self.ParachuteStatusLabel.SetFont(standardfont)
+                self.ParachuteStatusValue.SetFont(standardfont)
+                self.LEDStatusLabel.SetFont(standardfont)
+                self.LEDStatusValue.SetFont(standardfont)
+                self.SystemTemperatureLabel.SetFont(standardfont)
+                self.SystemTemperatureValue.SetFont(standardfont)
 
                 #Control Parameters
 
                 self.ParachuteLabel = wx.StaticText(panel,label = 'Parachute Status:',pos=(10,52))
-                self.ParachuteBtn = wx.ToggleButton(panel,label='OPEN',pos=(160,50),size=(80,25))
+                self.ParachuteBtn = wx.ToggleButton(panel,label='Open',pos=(160,50),size=(80,25))
                 self.LEDLabel = wx.StaticText(panel,label = 'LED Status:',pos=(10,82))
                 self.LEDBtn = wx.ToggleButton(panel,label='Turn On',pos=(160,80),size=(80,25))
                 self.OptoKineticLabel = wx.StaticText(panel,label = 'Opto-Kinetic Nystagmus Mode',pos=(10,112))
-		self.OptoKineticLabel.Wrap(150)
+                self.OptoKineticLabel.Wrap(120)
                 self.OptoKineticBtn = wx.ToggleButton(panel,label = 'Turn On',pos=(160,110),size=(80,25))
                 self.LightIntensityLabel = wx.StaticText(panel,label = 'Light Intensity', pos=(10,150))
                 self.LightIntensitySlider = wx.Slider(panel,-1,25,0,100,(160,140),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
                 self.DirectionalityLabel = wx.StaticText(panel,label = 'Directionality', pos=(10,180))
                 self.DirectionalitySlider = wx.Slider(panel,-1,0,-90,90,(160,170),(100,-1),wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
-		
-		self.ParachuteLabel.SetFont(standardfont)
-		self.ParachuteBtn.SetFont(standardfont)
-		self.LEDLabel.SetFont(standardfont)
-		self.LEDBtn.SetFont(standardfont)
-		self.OptoKineticLabel.SetFont(standardfont)
-		self.OptoKineticBtn.SetFont(standardfont)
-		self.LightIntensityLabel.SetFont(standardfont)
-		self.LightIntensitySlider.SetFont(standardfont)
-		self.DirectionalityLabel.SetFont(standardfont)
-		self.DirectionalitySlider.SetFont(standardfont)
+                
+                self.ParachuteLabel.SetFont(standardfont)
+                self.ParachuteBtn.SetFont(standardfont)
+                self.LEDLabel.SetFont(standardfont)
+                self.LEDBtn.SetFont(standardfont)
+                self.OptoKineticLabel.SetFont(standardfont)
+                self.OptoKineticBtn.SetFont(standardfont)
+                self.LightIntensityLabel.SetFont(standardfont)
+                self.LightIntensitySlider.SetFont(standardfont)
+                self.DirectionalityLabel.SetFont(standardfont)
+                self.DirectionalitySlider.SetFont(standardfont)
                                     
                 #Buttons
                 self.StartButton = wx.Button(panel,label = 'Start',pos=(465,270),size=(50,20))
                 self.UpdateButton = wx.Button(panel,label = 'Update GUI',size=(90,20),pos=(375,270))
                 self.MapButton = wx.Button(panel,label = 'Map', pos=(320,270),size = (50,20))
                 self.SendCommandBtn = wx.Button(panel,label = 'Send Commands',pos = (145,240),size = (125,25))
-		
+                
 
-		self.StartButton.SetFont(standardfont)
-		self.UpdateButton.SetFont(standardfont)
-		self.MapButton.SetFont(standardfont)
-		self.SendCommandBtn.SetFont(standardfont)
+                self.StartButton.SetFont(standardfont)
+                self.UpdateButton.SetFont(standardfont)
+                self.MapButton.SetFont(standardfont)
+                self.SendCommandBtn.SetFont(standardfont)
 
                 #Connection Status
                 self.ConnectionStatusLabel = wx.StaticText(panel,label = 'Connection Status:',pos=(320,5))
@@ -257,21 +257,21 @@ class MyFrame(wx.Frame):
 
                 
 
-		#Event Listeners
+                #Event Listeners
                 
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.ParachuteBtnPress,self.ParachuteBtn)
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.LEDBtnPress,self.LEDBtn)
                 self.Bind(wx.EVT_TOGGLEBUTTON,self.OptoKineticBtnPress,self.OptoKineticBtn)
                 self.Bind(wx.EVT_SLIDER,self.LightIntensitySliderUpdate,self.LightIntensitySlider)
                 self.Bind(wx.EVT_SLIDER,self.DirectionalitySliderUpdate,self.DirectionalitySlider)
-		self.Bind(wx.EVT_BUTTON,self.updateGUI,self.UpdateButton)
-		self.Bind(wx.EVT_BUTTON,self.openMap,self.MapButton)
-		self.Bind(wx.EVT_BUTTON,self.SendCommandFnc,self.SendCommandBtn)
+                self.Bind(wx.EVT_BUTTON,self.updateGUI,self.UpdateButton)
+                self.Bind(wx.EVT_BUTTON,self.openMap,self.MapButton)
+                self.Bind(wx.EVT_BUTTON,self.SendCommandFnc,self.SendCommandBtn)
                 self.Bind(wx.EVT_BUTTON,self.OnStart,self.StartButton)
 
-		
-		#Status Bar
-		self.StatusBar = self.CreateStatusBar()
+                
+                #Status Bar
+                self.StatusBar = self.CreateStatusBar()
                 self.StatusBar.SetStatusText('Ready')
                 
         def populateGUI(self):
