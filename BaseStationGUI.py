@@ -3,12 +3,15 @@ from threading import *
 import time
 import wx
 from collections import namedtuple
-#import usb
-#import packet
+import zlib
+
+
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand ParachuteCommand OptoKinetic LightIntensity Directionality")
+
+
 def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
 def EVT_UPDATESTATUS(win,func):        
@@ -27,26 +30,114 @@ class UpdateStatusEvent(wx.PyEvent):
 class FlareDataWorker(Thread):
         ExitCode = 0
         FlareData = DataPacket(40,30,1200,2,50,70,800,False,False,False)
+
+
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
                 self.start()
                 self.ExitCode = 0
+		self.rpacket = 0b0
         def UnpackPacket(self):
-                # This is the code to decode the data packet
-                # Used to edit the FlareData packet for testing
-                foo = 1
+                # Packet Shape
+		# Start Sequence    :1001
+		# Voltage           :8 bit
+		# Current           :8 bit
+		# Power             :8 bit
+		# DischargeCycles   :8 bit
+		# BatteryTemp	    :8 bit
+		# SystemTemp        :8 bit
+		# Altitude          :12 bit
+		# ParachuteStatus   :4 bit
+		# LEDStatus         :4 bit
+		# OptoKineticStatus :4 bit
+		# CRC		    :32bit
+		# End Sequence      :1010		
+		# Total Size        :112 bit
+		data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111110000
+		#Calculate CRC and check if it's equal.
+		self.rpacket = self.rpacket >> 4
+		CRC = self.rpacket & 0x100000000
+		self.rpacket = self.rpacket >> 32
+		# Need conditions to see when these are true or false when 1111 or 0000		
+		opto = self.rpacket & 0b1111
+		self.rpacket = self.rpacket >> 4
+		ledstatus = self.rpacket & 0b1111
+		self.rpacket = self.rpacket >> 4
+		parachute = self.rpacket & 0b1111
+		self.rpacket = self.rpacket >> 4
+		altitude = self.rpacket & 0b111111111111
+		self.rpacket = self.rpacket >> 12
+		SystemTemp = self.rpacket & 0b11111111
+		self.rpacket = self.rpacket >> 8
+		BatteryTemp = self.rpacket & 0b11111111
+		self.rpacket = self.rpacket >> 8
+		DischargeCycles = self.rpacket & 0b11111111
+		self.rpacket = self.rpacket >> 8
+		Power = self.rpacket & 0b11111111
+		self.rpacket = self.rpacket >> 8
+		Current = self.rpacket & 0b11111111
+		self.rpacket = self.rpacket >> 8
+		Voltage = self.rpacket & 0b11111111
+		self.rpacket = self.rpacket >> 8
+               	
+		#Test if all of these are right.
                         
         def run(self):
                 x = 0
                 while (self.ExitCode == 0):                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
-                        self.UnpackPacket()
                         self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
-                        wx.PostEvent(self.wxObject,ResultEvent(self.FlareData))#send to GUI                                                  
+                        wx.PostEvent(self.wxObject,ResultEvent(self.FlareData))#send to GUI
+			self.PackPacket()
+			self.UnpackPacket()                                               
                         time.sleep(1)                   
-        
+        def PackPacket(self):
+		startflag = 0b1001
+		endflag = 0b1010
+		crc = 0b0
+		self.rpacket = startflag
+		self.rpacket = self.rpacket << 8
+		
+		self.rpacket = self.rpacket + self.FlareData.BatteryVoltage
+		self.rpacket = self.rpacket << 8
+		self.rpacket = self.rpacket + self.FlareData.BatteryCurrent
+		self.rpacket = self.rpacket << 8
+		self.rpacket = self.rpacket + self.FlareData.BatteryPower
+		self.rpacket = self.rpacket << 8
+		self.rpacket = self.rpacket + self.FlareData.DischargeCycles
+		self.rpacket = self.rpacket << 8
+		self.rpacket = self.rpacket + self.FlareData.BatteryTemp
+		self.rpacket = self.rpacket << 8
+		self.rpacket = self.rpacket + self.FlareData.SystemTemp
+		self.rpacket = self.rpacket << 12
+		self.rpacket = self.rpacket + self.FlareData.Altitude
+		self.rpacket = self.rpacket << 4
+		if (self.FlareData.ParachuteStatus):
+			self.rpacket = self.rpacket + 0b1111
+		else :
+			self.rpacket = self.rpacket + 0b0000
+		self.rpacket = self.rpacket << 4
+		if (self.FlareData.LEDStatus):
+			self.rpacket = self.rpacket + 0b1111
+		else :
+			self.rpacket = self.rpacket + 0b0000
+		self.rpacket = self.rpacket << 4
+		if (self.FlareData.OptoKineticStatus):
+			self.rpacket = self.rpacket + 0b1111
+		else :
+			self.rpacket = self.rpacket + 0b0000
+		# Calculating CRC32
+		data = self.rpacket & 0b0000111111111111111111111111111111111111111111111111111111111111111111111111
+		crc = zlib.crc32(str(data))
+		self.rpacket = self.rpacket << 32
+		self.rpacket = self.rpacket + crc
+		self.rpacket = self.rpacket << 4
+		self.rpacket = self.rpacket + endflag
+		
+		
+				
                 
         def RequestForData(self):
                 #might not need this..
@@ -151,6 +242,12 @@ class MyFrame(wx.Frame):
                 self.StatusBar.SetStatusText('Collating Commands to Send')                
                 self.controlthread = ControlWorker(self,self.controlparameters)
                 self.StatusBar.SetStatusText('Commands Sent to Background Thread')
+		
+		#Logic to Disable buttons after commands have been sent
+		
+		if (self.controlparameters.ParachuteCommand):
+			self.ParachuteBtn.Disable()
+		
                 
         def OnCloseWindow(self,event):
                 self.worker.Abort()
