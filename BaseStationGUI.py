@@ -135,13 +135,7 @@ class FlareDataWorker(Thread):
 		self.rpacket = self.rpacket + crc
 		self.rpacket = self.rpacket << 4
 		self.rpacket = self.rpacket + endflag
-		
-		
-				
-                
-        def RequestForData(self):
-                #might not need this..
-                foo = 1
+
         def Abort(self):
                 self.ExitCode = 1
 class ControlWorker(Thread):
