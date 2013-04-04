@@ -1,6 +1,12 @@
 GDBP Base Station Program Change Log
 ====================================
 
+Version 1.1.4 (April 4th 2013)
+------------------------------
+
+- Upack and Pack packet functions implemented with a working CRC check
+- Basic error handling on the CRC check exists
+
 Version 1.1.3 (April 1st 2013)
 ------------------------------
 

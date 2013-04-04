@@ -3,8 +3,9 @@ from threading import *
 import time
 import wx
 from collections import namedtuple
-import zlib
-
+import crcmod
+import bitstring
+#from bitstring import BitStream
 
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
@@ -29,9 +30,7 @@ class UpdateStatusEvent(wx.PyEvent):
                 
 class FlareDataWorker(Thread):
         ExitCode = 0
-        FlareData = DataPacket(40,30,1200,2,50,70,800,False,False,False)
-
-
+        FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,True)
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -43,25 +42,31 @@ class FlareDataWorker(Thread):
 		# Start Sequence    :1001
 		# Voltage           :8 bit
 		# Current           :8 bit
-		# Power             :8 bit
+		# Power             :12 bit
 		# DischargeCycles   :8 bit
 		# BatteryTemp	    :8 bit
 		# SystemTemp        :8 bit
 		# Altitude          :12 bit
 		# ParachuteStatus   :4 bit
 		# LEDStatus         :4 bit
-		# OptoKineticStatus :4 bit
+		# OptoKineticStatus :4 bit 			
+                # ErrorStateFlags    :10 bit not implemented 																					
 		# CRC		    :32bit
 		# End Sequence      :1010		
-		# Total Size        :112 bit
-		data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111110000
-		#Calculate CRC and check if it's equal.
+		# Total Size        :116 bit
+		
 		self.rpacket = self.rpacket >> 4
-		CRC = self.rpacket & 0x100000000
-		self.rpacket = self.rpacket >> 32
-		# Need conditions to see when these are true or false when 1111 or 0000		
-		opto = self.rpacket & 0b1111
-		self.rpacket = self.rpacket >> 4
+		crcrec = self.rpacket & 0b11111111111111111111111111111111
+                #Calculate CRC and check if it's equal.
+                self.rpacket = self.rpacket >> 32
+                dataToCRC = self.rpacket & 0b0000111111111111111111111111111111111111111111111111111111111111111111111111111
+                crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
+                crccalc = crc32_func(str(dataToCRC))
+                if crccalc!=crcrec:
+                        print "There has been an error. Discard Data"
+		# Need conditions to see when these are true or false when 1111 or 0000	
+		opto = self.rpacket & 0b1111		
+		self.rpacket = self.rpacket >> 4 																																																																																																																																												 																																																																																																																																																																																																																																									
 		ledstatus = self.rpacket & 0b1111
 		self.rpacket = self.rpacket >> 4
 		parachute = self.rpacket & 0b1111
@@ -74,26 +79,29 @@ class FlareDataWorker(Thread):
 		self.rpacket = self.rpacket >> 8
 		DischargeCycles = self.rpacket & 0b11111111
 		self.rpacket = self.rpacket >> 8
-		Power = self.rpacket & 0b11111111
-		self.rpacket = self.rpacket >> 8
+		Power = self.rpacket & 0b1111111111111
+		self.rpacket = self.rpacket >> 12
 		Current = self.rpacket & 0b11111111
 		self.rpacket = self.rpacket >> 8
 		Voltage = self.rpacket & 0b11111111
-		self.rpacket = self.rpacket >> 8
-               	
-		#Test if all of these are right.
-                        
+		self.rpacket = self.rpacket >> 4
+
         def run(self):
                 x = 0
                 while (self.ExitCode == 0):                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
-                        self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
-                        wx.PostEvent(self.wxObject,ResultEvent(self.FlareData))#send to GUI
+                        #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
+                        
 			self.PackPacket()
-			self.UnpackPacket()                                               
+			error = self.UnpackPacket()
+                        if error == -1:
+                                print "Packet is Ignored"
+                                continue
+                        wx.PostEvent(self.wxObject,ResultEvent(self.FlareData)) #send to GUI                                               
                         time.sleep(1)                   
         def PackPacket(self):
+                # --------------- This function is just here to Test. WILL NOT BE SENDING DATA TO FLARE ------------------------- #
 		startflag = 0b1001
 		endflag = 0b1010
 		crc = 0b0
@@ -103,7 +111,7 @@ class FlareDataWorker(Thread):
 		self.rpacket = self.rpacket + self.FlareData.BatteryVoltage
 		self.rpacket = self.rpacket << 8
 		self.rpacket = self.rpacket + self.FlareData.BatteryCurrent
-		self.rpacket = self.rpacket << 8
+		self.rpacket = self.rpacket << 12
 		self.rpacket = self.rpacket + self.FlareData.BatteryPower
 		self.rpacket = self.rpacket << 8
 		self.rpacket = self.rpacket + self.FlareData.DischargeCycles
@@ -114,25 +122,31 @@ class FlareDataWorker(Thread):
 		self.rpacket = self.rpacket << 12
 		self.rpacket = self.rpacket + self.FlareData.Altitude
 		self.rpacket = self.rpacket << 4
-		if (self.FlareData.ParachuteStatus):
+		if (self.FlareData.ParachuteStatus == True):
 			self.rpacket = self.rpacket + 0b1111
 		else :
 			self.rpacket = self.rpacket + 0b0000
 		self.rpacket = self.rpacket << 4
-		if (self.FlareData.LEDStatus):
+		if (self.FlareData.LEDStatus == True):
 			self.rpacket = self.rpacket + 0b1111
 		else :
 			self.rpacket = self.rpacket + 0b0000
 		self.rpacket = self.rpacket << 4
-		if (self.FlareData.OptoKineticStatus):
+		if (self.FlareData.OptoKineticStatus == True):
 			self.rpacket = self.rpacket + 0b1111
 		else :
 			self.rpacket = self.rpacket + 0b0000
 		# Calculating CRC32
-		data = self.rpacket & 0b0000111111111111111111111111111111111111111111111111111111111111111111111111
-		crc = zlib.crc32(str(data))
+		
+		data = self.rpacket & 0b0000111111111111111111111111111111111111111111111111111111111111111111111111111
+		crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
+                crc = crc32_func(str(data))
+
+
 		self.rpacket = self.rpacket << 32
+		
 		self.rpacket = self.rpacket + crc
+		
 		self.rpacket = self.rpacket << 4
 		self.rpacket = self.rpacket + endflag
 
