@@ -59,7 +59,7 @@ class FlareDataWorker(Thread):
 		crcrec = self.rpacket & 0b11111111111111111111111111111111
                 #Calculate CRC and check if it's equal.
                 self.rpacket = self.rpacket >> 32
-                dataToCRC = self.rpacket & 0b0000111111111111111111111111111111111111111111111111111111111111111111111111111
+                dataToCRC = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
                 crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                 crccalc = crc32_func(str(dataToCRC))
                 if crccalc!=crcrec:
@@ -142,7 +142,7 @@ class FlareDataWorker(Thread):
 		self.rpacket = self.rpacket + self.FlareData.ErrorStates
                 # Calculating CRC32
 		
-		data = self.rpacket & 0b0000111111111111111111111111111111111111111111111111111111111111111111111111111
+		data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 		crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                 crc = crc32_func(str(data))
 
