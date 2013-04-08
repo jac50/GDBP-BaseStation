@@ -10,7 +10,7 @@ import crcmod
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus ErrorStates")                
-ControlParameters = namedtuple("ControlParameters", "LEDCommand ParachuteCommand OptoKinetic LightIntensity Directionality")
+ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
 
 
 def EVT_RESULT(win,func):
@@ -156,20 +156,51 @@ class FlareDataWorker(Thread):
         def Abort(self):
                 self.ExitCode = 1
 class ControlWorker(Thread):
+        Commands = ControlParameters(0b11,0b1111,0b11,0b00001111,0b11) 
         def __init__(self,wxObject,args):
                 Thread.__init__(self)
                 self.wxObject = wxObject
                 self.commands = args
                 self.start()
+                self.cpacket = 0b00
         def run(self):
                 wx.PostEvent(self.wxObject,UpdateStatusEvent("Packing Packet"))
                 self.PackPacket()
                 wx.PostEvent(self.wxObject,UpdateStatusEvent("Sending Packet"))
-                
+                wx.PostEvent(self.wxObject,UpdateStatusEvent(str(self.cpacket)))
+ 
+                        
         def PackPacket(self):
-                #Pack Packet here
-                #Use import packet to pack the packet. or maybe do it myself.
-                time.sleep(0.5)
+                #Packet Shape
+                #Start flag          : 1100
+                #LEDCommands Flag    : 2 bit
+                #Light Intenisty Flag : 4 bit
+                #OptoKineticFlag     : 2 bit
+                #Directionality Flag : 8 bit
+                #Parachute Flag      : 2 bit
+                # CRC                :
+                # End Flag           : 0011
+
+               self.cpacket = 0b1100
+	       self.cpacket =  self.cpacket << 2
+               self.cpacket = self.cpacket + self.Commands.LEDCommand
+               self.cpacket = self.cpacket << 4
+               self.cpacket = self.cpacket + self.Commands.LEDIntensity
+               self.cpacket = self.cpacket << 2
+               self.cpacket = self.cpacket + self.Commands.OptoKinetic
+               self.cpacket = self.cpacket << 8
+               self.cpacket = self.cpacket + self.Commands.Directionality
+               self.cpacket = self.cpacket << 2
+               self.cpacket = self.cpacket + self.Commands.ParachuteCommand
+               # GenerateC CRC
+               data = 0b0000111111111111111111
+               crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
+	       crc = crc32_func(str(data))
+               self.cpacket =  self.cpacket << 32
+               self.cpacket = self.cpacket + crc
+               self.cpacket = self.cpacket << 4
+               self.cpacket = self.cpacket + 0b0011
+        
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
                 super(MyFrame,self).__init__(parent,title=title,size=(550,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
@@ -224,7 +255,7 @@ class MyFrame(wx.Frame):
                         self.worker = None
                         self.StartButton.SetLabel('Start')
         def LightIntensitySliderUpdate(self,evt):
-                self.controlparameters = self.controlparameters._replace(LightIntensity = self.LightIntensitySlider.GetValue())
+                self.controlparameters = self.controlparameters._replace(LEDIntensity = self.LightIntensitySlider.GetValue())
         def DirectionalitySliderUpdate(self,evt):
                 self.controlparameters = self.controlparameters._replace(Directionality = self.DirectionalitySlider.GetValue())
         def updateDisplay(self,msg):

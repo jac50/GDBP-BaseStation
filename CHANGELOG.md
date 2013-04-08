@@ -5,7 +5,7 @@ Version 1.1.5 (April 8th 2013)
 -----------------------------
 
 - Errors switch on error flags rather than a fixed limit.
-
+- Control Packet has been implemented
 
 Version 1.1.4 (April 4th 2013)
 ------------------------------
