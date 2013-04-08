@@ -449,9 +449,9 @@ class MyFrame(wx.Frame):
                                 self.LEDStatusValue.SetBackgroundColour('#00FF00')
                 if self.OptoKineticStatusValue.GetLabel()!='-':
                         if (error & 0b0000000001):
-                                self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
-                        else:
                                 self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
                 if self.ConnectionStatusValue.GetLabel() == "Not Connected":
                         self.ConnectionStatusValue.SetBackgroundColour('#FF0000')
                 else:
