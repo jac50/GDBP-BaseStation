@@ -140,16 +140,9 @@ class FlareDataWorker(Thread):
                         self.rpacket = self.rpacket + 0b0000
                 self.rpacket = self.rpacket << 10
                 self.rpacket = self.rpacket + self.FlareData.ErrorStates
-                # Calculating CRC32
-<<<<<<< HEAD
-		
-		data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-		crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
-=======
-                
+                # Calculating CRC32              
                 data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
                 crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
->>>>>>> 6c3352ad70aadcc122a0812941bde2773e61c7fd
                 crc = crc32_func(str(data))
 
 
