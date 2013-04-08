@@ -30,7 +30,7 @@ class UpdateStatusEvent(wx.PyEvent):
                 
 class FlareDataWorker(Thread):
         ExitCode = 0
-        FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,True, 0b0000000000)
+        FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -64,6 +64,7 @@ class FlareDataWorker(Thread):
                 crccalc = crc32_func(str(dataToCRC))
                 if crccalc!=crcrec:
                         print "There has been an error. Discard Data"
+                        
                 # Need conditions to see when these are true or false when 1111 or 0000 
                 errorstate = self.rpacket & 0b1111111111
                 self.rpacket = self.rpacket >> 10
@@ -144,7 +145,6 @@ class FlareDataWorker(Thread):
                 data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
                 crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                 crc = crc32_func(str(data))
-
 
                 self.rpacket = self.rpacket << 32
                 
