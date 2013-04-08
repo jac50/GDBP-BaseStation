@@ -430,8 +430,8 @@ class MyFrame(wx.Frame):
         
         def updateGUI(self,evt,error):
                 
+                print self.BatteryVoltageValue.GetLabel()
                 #Update Box Colours
-                
                 if self.BatteryVoltageValue.GetLabel() !='-':
                         if (error & 0b1000000000) :  
                                 self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
