@@ -1,6 +1,12 @@
 GDBP Base Station Program Change Log
 ====================================
 
+Version 1.1.5 (April 8th 2013)
+-----------------------------
+
+- Errors switch on error flags rather than a fixed limit.
+
+
 Version 1.1.4 (April 4th 2013)
 ------------------------------
 
@@ -36,7 +42,7 @@ Version 1.1.0 (26th March 2013)
 - Start button added which starts updating system information
 - Map button added to open up a map window. Hasn't been decided on how this will be done though
 - An Update GUI button as been added for Development purposes only
-
+																																																																																																																																																																																																			
 
 
 Version 1.0 (25th March 2013)

@@ -5,11 +5,11 @@ import wx
 from collections import namedtuple
 import crcmod
 import bitstring
-#from bitstring import BitStream
+
 
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
-DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus")                
+DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus ErrorStates")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand ParachuteCommand OptoKinetic LightIntensity Directionality")
 
 
@@ -30,7 +30,7 @@ class UpdateStatusEvent(wx.PyEvent):
                 
 class FlareDataWorker(Thread):
         ExitCode = 0
-        FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,True)
+        FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,True, 0b0000000000)
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -50,7 +50,7 @@ class FlareDataWorker(Thread):
 		# ParachuteStatus   :4 bit
 		# LEDStatus         :4 bit
 		# OptoKineticStatus :4 bit 			
-                # ErrorStateFlags    :10 bit not implemented 																					
+                # ErrorStateFlags   :10 bit
 		# CRC		    :32bit
 		# End Sequence      :1010		
 		# Total Size        :116 bit
@@ -65,8 +65,10 @@ class FlareDataWorker(Thread):
                 if crccalc!=crcrec:
                         print "There has been an error. Discard Data"
 		# Need conditions to see when these are true or false when 1111 or 0000	
+		errorstate = self.rpacket & 0b1111111111
+		self.rpacket = self.rpacket >> 10
 		opto = self.rpacket & 0b1111		
-		self.rpacket = self.rpacket >> 4 																																																																																																																																												 																																																																																																																																																																																																																																									
+		self.rpacket = self.rpacket >> 4																	
 		ledstatus = self.rpacket & 0b1111
 		self.rpacket = self.rpacket >> 4
 		parachute = self.rpacket & 0b1111
@@ -136,7 +138,9 @@ class FlareDataWorker(Thread):
 			self.rpacket = self.rpacket + 0b1111
 		else :
 			self.rpacket = self.rpacket + 0b0000
-		# Calculating CRC32
+		self.rpacket = self.rpacket << 10
+		self.rpacket = self.rpacket + self.FlareData.ErrorStates
+                # Calculating CRC32
 		
 		data = self.rpacket & 0b0000111111111111111111111111111111111111111111111111111111111111111111111111111
 		crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
@@ -176,7 +180,7 @@ class MyFrame(wx.Frame):
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
                 EVT_UPDATESTATUS(self,self.UpdateStatus)
-                self.updateGUI(0)
+                self.updateGUI(0,0)
                 self.Show() 
         def UpdateStatus(self,msg):
                 t = msg.data
@@ -225,7 +229,7 @@ class MyFrame(wx.Frame):
         def DirectionalitySliderUpdate(self,evt):
                 self.controlparameters = self.controlparameters._replace(Directionality = self.DirectionalitySlider.GetValue())
         def updateDisplay(self,msg):
-                self.updateGUI(1)
+                #self.updateGUI(1)
                 t = msg.data
                 self.StatusBar.SetStatusText('Data Received')
                 self.BatteryVoltageValue.SetLabel(str(t.BatteryVoltage))
@@ -245,7 +249,7 @@ class MyFrame(wx.Frame):
                         self.OptoKineticStatusValue.SetLabel('ON')
                 else: self.OptoKineticStatusValue.SetLabel('OFF')
                 self.StatusBar.SetStatusText('Ready')
-                self.updateGUI(1)
+                self.updateGUI(0,t.ErrorStates)
         def SendCommandFnc(self,evt):
                 self.StatusBar.SetStatusText('Collating Commands to Send')                
                 self.controlthread = ControlWorker(self,self.controlparameters)
@@ -394,60 +398,58 @@ class MyFrame(wx.Frame):
                 self.ConnectionStatusValue.SetLabel('Not Connected')
                 
         
-        def updateGUI(self,evt):
+        def updateGUI(self,evt,error):
                 
                 #Update Box Colours
                 
-                #---- ALL OF THE FIGURES HERE ARE ARBITARY ------ 
                 if self.BatteryVoltageValue.GetLabel() !='-':
-                        if int(self.BatteryVoltageValue.GetLabel()) < 30 :  
+                        if (error & 0b1000000000) :  
                                 self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.BatteryVoltageValue.SetBackgroundColour('#00FF00')
                 if self.BatteryCurrentValue.GetLabel() !='-':
-                        if int(self.BatteryCurrentValue.GetLabel()) > 200 : 
+                        if (error & 0b0100000000) : 
                                 self.BatteryCurrentValue.SetBackgroundColour('#FF0000')
                         else:   
                                 self.BatteryCurrentValue.SetBackgroundColour('#00FF00')
                 if self.BatteryPowerValue.GetLabel() != '-':
-                        if int(self.BatteryPowerValue.GetLabel()) < 1000000 : 
-                                self.BatteryPowerValue.SetBackgroundColour('#FF0000')
-                        else:
+               		 if (error & 0b0010000000) :
+				    self.BatteryPowerValue.SetBackgroundColour('#FF0000')
+                         else:
                                 self.BatteryPowerValue.SetBackgroundColour('#00FF00')
                 if self.BatteryDischargesValue.GetLabel() !='-':
-                        if int(self.BatteryDischargesValue.GetLabel()) > 50 : 
+                        if (error & 0b0001000000) : 
                                 self.BatteryDischargesValue.SetBackgroundColour('#FF0000')
                         else: self.BatteryDischargesValue.SetBackgroundColour('#00FF00')     
                 if self.BatteryTemperatureValue.GetLabel() != '-':
-                        if int(self.BatteryTemperatureValue.GetLabel()) > 80 : 
+                        if (error & 0b0000100000) : 
                                 self.BatteryTemperatureValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.BatteryTemperatureValue.SetBackgroundColour('#00FF00')
                 if self.SystemTemperatureValue.GetLabel() != '-':
-                        if int(self.SystemTemperatureValue.GetLabel()) > 60 : 
+                        if (error & 0b0000010000) : 
                                 self.SystemTemperatureValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.SystemTemperatureValue.SetBackgroundColour('#00FF00')
 
-                #Altitude Value - This needs to be adapted so the value colour will only change to red if the flare is in at an incorrect altitude (IE parachute not launched and rapidly falling)
                 if self.AltitudeValue.GetLabel()!='-':
-                        if int(self.AltitudeValue.GetLabel()) < 10 : 
+                        if (error & 0b0000001000) : 
                                 self.AltitudeValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.AltitudeValue.SetBackgroundColour('#00FF00')
                     
                 if self.ParachuteStatusValue.GetLabel()!='-':
-                        if self.ParachuteStatusValue.GetLabel() == 'CLOSE' : 
+                        if (error & 0b0000000100) : 
                                 self.ParachuteStatusValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.ParachuteStatusValue.SetBackgroundColour('#00FF00')
                 if self.LEDStatusValue.GetLabel()!='-':
-                        if self.LEDStatusValue.GetLabel() == "OFF" : 
+                        if (error & 0b0000000010) : 
                                 self.LEDStatusValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.LEDStatusValue.SetBackgroundColour('#00FF00')
                 if self.OptoKineticStatusValue.GetLabel()!='-':
-                        if self.OptoKineticStatusValue.GetLabel() == "ON":
+                        if (error & 0b0000000001):
                                 self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
                         else:
                                 self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
