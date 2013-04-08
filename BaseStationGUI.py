@@ -210,7 +210,6 @@ class MyFrame(wx.Frame):
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
                 EVT_UPDATESTATUS(self,self.UpdateStatus)
-                self.updateGUI(0,0)
                 self.Show() 
         def UpdateStatus(self,msg):
                 t = msg.data
@@ -259,7 +258,6 @@ class MyFrame(wx.Frame):
         def DirectionalitySliderUpdate(self,evt):
                 self.controlparameters = self.controlparameters._replace(Directionality = self.DirectionalitySlider.GetValue())
         def updateDisplay(self,msg):
-                #self.updateGUI(1)
                 t = msg.data
                 self.StatusBar.SetStatusText('Data Received')
                 self.BatteryVoltageValue.SetLabel(str(t.BatteryVoltage))
@@ -430,10 +428,9 @@ class MyFrame(wx.Frame):
         
         def updateGUI(self,evt,error):
                 
-                print self.BatteryVoltageValue.GetLabel()
                 #Update Box Colours
                 if self.BatteryVoltageValue.GetLabel() !='-':
-                        if (error & 0b1000000000) :  
+                        if (error & 0b1000000000) :
                                 self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.BatteryVoltageValue.SetBackgroundColour('#00FF00')
@@ -487,7 +484,7 @@ class MyFrame(wx.Frame):
                         self.ConnectionStatusValue.SetBackgroundColour('#FF0000')
                 else:
                         self.ConnectionStatusValue.SetBackgroundColour('#00FF00')
-
+                self.Refresh() # have to force a refresh or the colours won't update
         
 if __name__ == '__main__':
     app = wx.App(0)
