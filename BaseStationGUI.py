@@ -182,7 +182,7 @@ class ControlWorker(Thread):
                 # End Flag           : 0011
 
                self.cpacket = 0b1100
-	       self.cpacket =  self.cpacket << 2
+               self.cpacket =  self.cpacket << 2
                self.cpacket = self.cpacket + self.Commands.LEDCommand
                self.cpacket = self.cpacket << 4
                self.cpacket = self.cpacket + self.Commands.LEDIntensity
@@ -195,7 +195,7 @@ class ControlWorker(Thread):
                # GenerateC CRC
                data = 0b0000111111111111111111
                crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
-	       crc = crc32_func(str(data))
+               crc = crc32_func(str(data))
                self.cpacket =  self.cpacket << 32
                self.cpacket = self.cpacket + crc
                self.cpacket = self.cpacket << 4
