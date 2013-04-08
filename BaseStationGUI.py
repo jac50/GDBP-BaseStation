@@ -4,6 +4,7 @@ import time
 import wx
 from collections import namedtuple
 import crcmod
+import serial
 #import bitstring
 
 
@@ -31,6 +32,7 @@ class UpdateStatusEvent(wx.PyEvent):
 class FlareDataWorker(Thread):
         ExitCode = 0
         FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
+        port = serial.Serial(timeout=5) #9600, 8, N, 1
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -64,7 +66,7 @@ class FlareDataWorker(Thread):
                 crccalc = crc32_func(str(dataToCRC))
                 if crccalc!=crcrec:
                         print "There has been an error. Discard Data"
-                        
+                        return -1
                 # Need conditions to see when these are true or false when 1111 or 0000 
                 errorstate = self.rpacket & 0b1111111111
                 self.rpacket = self.rpacket >> 10
@@ -90,19 +92,24 @@ class FlareDataWorker(Thread):
                 self.rpacket = self.rpacket >> 4
 
         def run(self):
-                x = 0
                 while (self.ExitCode == 0):                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
                         #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         
-                        self.PackPacket()
+                        self.PackPacket() # only used for testing
+                        self.ReceiveData()
                         error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
                                 continue
                         wx.PostEvent(self.wxObject,ResultEvent(self.FlareData)) #send to GUI                                               
-                        time.sleep(1)                   
+                        time.sleep(1)
+        def ReceiveData(self):
+                # ---- Function used to retrieve and format the received signal correctly ----
+               self.rpacket =  port.read(15)
+               self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits
+               print bin(self.rpacket) #test line to ensure that the read works																											                   
         def PackPacket(self):
                 # --------------- This function is just here to Test. WILL NOT BE SENDING DATA TO FLARE ------------------------- #
                 startflag = 0b1001
@@ -157,6 +164,7 @@ class FlareDataWorker(Thread):
                 self.ExitCode = 1
 class ControlWorker(Thread):
         Commands = ControlParameters(0b11,0b1111,0b11,0b00001111,0b11) 
+        port = serial.Serial(timeout = 5)
         def __init__(self,wxObject,args):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -168,8 +176,6 @@ class ControlWorker(Thread):
                 self.PackPacket()
                 wx.PostEvent(self.wxObject,UpdateStatusEvent("Sending Packet"))
                 wx.PostEvent(self.wxObject,UpdateStatusEvent(str(self.cpacket)))
- 
-                        
         def PackPacket(self):
                 #Packet Shape
                 #Start flag          : 1100
@@ -200,7 +206,8 @@ class ControlWorker(Thread):
                self.cpacket = self.cpacket + crc
                self.cpacket = self.cpacket << 4
                self.cpacket = self.cpacket + 0b0011
-        
+        def SendPacket(self):
+               port.write(self.cpacket) # need to test this 
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
                 super(MyFrame,self).__init__(parent,title=title,size=(550,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
