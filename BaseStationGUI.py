@@ -4,7 +4,7 @@ import time
 import wx
 from collections import namedtuple
 import crcmod
-import bitstring
+#import bitstring
 
 
 EVT_RESULT_ID=wx.NewId()
@@ -36,27 +36,27 @@ class FlareDataWorker(Thread):
                 self.wxObject = wxObject
                 self.start()
                 self.ExitCode = 0
-		self.rpacket = 0b0
+                self.rpacket = 0b0
         def UnpackPacket(self):
                 # Packet Shape
-		# Start Sequence    :1001
-		# Voltage           :8 bit
-		# Current           :8 bit
-		# Power             :12 bit
-		# DischargeCycles   :8 bit
-		# BatteryTemp	    :8 bit
-		# SystemTemp        :8 bit
-		# Altitude          :12 bit
-		# ParachuteStatus   :4 bit
-		# LEDStatus         :4 bit
-		# OptoKineticStatus :4 bit 			
+                # Start Sequence    :1001
+                # Voltage           :8 bit
+                # Current           :8 bit
+                # Power             :12 bit
+                # DischargeCycles   :8 bit
+                # BatteryTemp       :8 bit
+                # SystemTemp        :8 bit
+                # Altitude          :12 bit
+                # ParachuteStatus   :4 bit
+                # LEDStatus         :4 bit
+                # OptoKineticStatus :4 bit                      
                 # ErrorStateFlags   :10 bit
-		# CRC		    :32bit
-		# End Sequence      :1010		
-		# Total Size        :116 bit
-		
-		self.rpacket = self.rpacket >> 4
-		crcrec = self.rpacket & 0b11111111111111111111111111111111
+                # CRC               :32bit
+                # End Sequence      :1010               
+                # Total Size        :116 bit
+                
+                self.rpacket = self.rpacket >> 4
+                crcrec = self.rpacket & 0b11111111111111111111111111111111
                 #Calculate CRC and check if it's equal.
                 self.rpacket = self.rpacket >> 32
                 dataToCRC = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
@@ -64,29 +64,29 @@ class FlareDataWorker(Thread):
                 crccalc = crc32_func(str(dataToCRC))
                 if crccalc!=crcrec:
                         print "There has been an error. Discard Data"
-		# Need conditions to see when these are true or false when 1111 or 0000	
-		errorstate = self.rpacket & 0b1111111111
-		self.rpacket = self.rpacket >> 10
-		opto = self.rpacket & 0b1111		
-		self.rpacket = self.rpacket >> 4																	
-		ledstatus = self.rpacket & 0b1111
-		self.rpacket = self.rpacket >> 4
-		parachute = self.rpacket & 0b1111
-		self.rpacket = self.rpacket >> 4
-		altitude = self.rpacket & 0b111111111111
-		self.rpacket = self.rpacket >> 12
-		SystemTemp = self.rpacket & 0b11111111
-		self.rpacket = self.rpacket >> 8
-		BatteryTemp = self.rpacket & 0b11111111
-		self.rpacket = self.rpacket >> 8
-		DischargeCycles = self.rpacket & 0b11111111
-		self.rpacket = self.rpacket >> 8
-		Power = self.rpacket & 0b1111111111111
-		self.rpacket = self.rpacket >> 12
-		Current = self.rpacket & 0b11111111
-		self.rpacket = self.rpacket >> 8
-		Voltage = self.rpacket & 0b11111111
-		self.rpacket = self.rpacket >> 4
+                # Need conditions to see when these are true or false when 1111 or 0000 
+                errorstate = self.rpacket & 0b1111111111
+                self.rpacket = self.rpacket >> 10
+                opto = self.rpacket & 0b1111            
+                self.rpacket = self.rpacket >> 4                                                                                                                                        
+                ledstatus = self.rpacket & 0b1111
+                self.rpacket = self.rpacket >> 4
+                parachute = self.rpacket & 0b1111
+                self.rpacket = self.rpacket >> 4
+                altitude = self.rpacket & 0b111111111111
+                self.rpacket = self.rpacket >> 12
+                SystemTemp = self.rpacket & 0b11111111
+                self.rpacket = self.rpacket >> 8
+                BatteryTemp = self.rpacket & 0b11111111
+                self.rpacket = self.rpacket >> 8
+                DischargeCycles = self.rpacket & 0b11111111
+                self.rpacket = self.rpacket >> 8
+                Power = self.rpacket & 0b1111111111111
+                self.rpacket = self.rpacket >> 12
+                Current = self.rpacket & 0b11111111
+                self.rpacket = self.rpacket >> 8
+                Voltage = self.rpacket & 0b11111111
+                self.rpacket = self.rpacket >> 4
 
         def run(self):
                 x = 0
@@ -95,8 +95,8 @@ class FlareDataWorker(Thread):
                         #unpack packet and add to DataPacket Variable declared above.
                         #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         
-			self.PackPacket()
-			error = self.UnpackPacket()
+                        self.PackPacket()
+                        error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
                                 continue
@@ -104,55 +104,61 @@ class FlareDataWorker(Thread):
                         time.sleep(1)                   
         def PackPacket(self):
                 # --------------- This function is just here to Test. WILL NOT BE SENDING DATA TO FLARE ------------------------- #
-		startflag = 0b1001
-		endflag = 0b1010
-		crc = 0b0
-		self.rpacket = startflag
-		self.rpacket = self.rpacket << 8
-		
-		self.rpacket = self.rpacket + self.FlareData.BatteryVoltage
-		self.rpacket = self.rpacket << 8
-		self.rpacket = self.rpacket + self.FlareData.BatteryCurrent
-		self.rpacket = self.rpacket << 12
-		self.rpacket = self.rpacket + self.FlareData.BatteryPower
-		self.rpacket = self.rpacket << 8
-		self.rpacket = self.rpacket + self.FlareData.DischargeCycles
-		self.rpacket = self.rpacket << 8
-		self.rpacket = self.rpacket + self.FlareData.BatteryTemp
-		self.rpacket = self.rpacket << 8
-		self.rpacket = self.rpacket + self.FlareData.SystemTemp
-		self.rpacket = self.rpacket << 12
-		self.rpacket = self.rpacket + self.FlareData.Altitude
-		self.rpacket = self.rpacket << 4
-		if (self.FlareData.ParachuteStatus == True):
-			self.rpacket = self.rpacket + 0b1111
-		else :
-			self.rpacket = self.rpacket + 0b0000
-		self.rpacket = self.rpacket << 4
-		if (self.FlareData.LEDStatus == True):
-			self.rpacket = self.rpacket + 0b1111
-		else :
-			self.rpacket = self.rpacket + 0b0000
-		self.rpacket = self.rpacket << 4
-		if (self.FlareData.OptoKineticStatus == True):
-			self.rpacket = self.rpacket + 0b1111
-		else :
-			self.rpacket = self.rpacket + 0b0000
-		self.rpacket = self.rpacket << 10
-		self.rpacket = self.rpacket + self.FlareData.ErrorStates
+                startflag = 0b1001
+                endflag = 0b1010
+                crc = 0b0
+                self.rpacket = startflag
+                self.rpacket = self.rpacket << 8
+                
+                self.rpacket = self.rpacket + self.FlareData.BatteryVoltage
+                self.rpacket = self.rpacket << 8
+                self.rpacket = self.rpacket + self.FlareData.BatteryCurrent
+                self.rpacket = self.rpacket << 12
+                self.rpacket = self.rpacket + self.FlareData.BatteryPower
+                self.rpacket = self.rpacket << 8
+                self.rpacket = self.rpacket + self.FlareData.DischargeCycles
+                self.rpacket = self.rpacket << 8
+                self.rpacket = self.rpacket + self.FlareData.BatteryTemp
+                self.rpacket = self.rpacket << 8
+                self.rpacket = self.rpacket + self.FlareData.SystemTemp
+                self.rpacket = self.rpacket << 12
+                self.rpacket = self.rpacket + self.FlareData.Altitude
+                self.rpacket = self.rpacket << 4
+                if (self.FlareData.ParachuteStatus == True):
+                        self.rpacket = self.rpacket + 0b1111
+                else :
+                        self.rpacket = self.rpacket + 0b0000
+                self.rpacket = self.rpacket << 4
+                if (self.FlareData.LEDStatus == True):
+                        self.rpacket = self.rpacket + 0b1111
+                else :
+                        self.rpacket = self.rpacket + 0b0000
+                self.rpacket = self.rpacket << 4
+                if (self.FlareData.OptoKineticStatus == True):
+                        self.rpacket = self.rpacket + 0b1111
+                else :
+                        self.rpacket = self.rpacket + 0b0000
+                self.rpacket = self.rpacket << 10
+                self.rpacket = self.rpacket + self.FlareData.ErrorStates
                 # Calculating CRC32
+<<<<<<< HEAD
 		
 		data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 		crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
+=======
+                
+                data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+                crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
+>>>>>>> 6c3352ad70aadcc122a0812941bde2773e61c7fd
                 crc = crc32_func(str(data))
 
 
-		self.rpacket = self.rpacket << 32
-		
-		self.rpacket = self.rpacket + crc
-		
-		self.rpacket = self.rpacket << 4
-		self.rpacket = self.rpacket + endflag
+                self.rpacket = self.rpacket << 32
+                
+                self.rpacket = self.rpacket + crc
+                
+                self.rpacket = self.rpacket << 4
+                self.rpacket = self.rpacket + endflag
 
         def Abort(self):
                 self.ExitCode = 1
@@ -254,12 +260,12 @@ class MyFrame(wx.Frame):
                 self.StatusBar.SetStatusText('Collating Commands to Send')                
                 self.controlthread = ControlWorker(self,self.controlparameters)
                 self.StatusBar.SetStatusText('Commands Sent to Background Thread')
-		
-		#Logic to Disable buttons after commands have been sent
-		
-		if (self.controlparameters.ParachuteCommand):
-			self.ParachuteBtn.Disable()
-		
+                
+                #Logic to Disable buttons after commands have been sent
+                
+                if (self.controlparameters.ParachuteCommand):
+                        self.ParachuteBtn.Disable()
+                
                 
         def OnCloseWindow(self,event):
                 self.worker.Abort()
@@ -273,7 +279,7 @@ class MyFrame(wx.Frame):
                 #---- Need Title and Image -----
                 standardfont = wx.Font(8,wx.SWISS,wx.NORMAL,wx.NORMAL)
                 #Battery Information
-		
+                
                 self.BatteryStaticBox = wx.StaticBox(panel,label = 'Battery Information',pos=(290,20),size=(225,120))
                 self.BatteryVoltageLabel = wx.StaticText(panel,label='Voltage (V)',style=wx.ALIGN_CENTRE,pos=(300,40))
                 self.BatteryVoltageValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,40),size=(50,15))
@@ -413,8 +419,8 @@ class MyFrame(wx.Frame):
                         else:   
                                 self.BatteryCurrentValue.SetBackgroundColour('#00FF00')
                 if self.BatteryPowerValue.GetLabel() != '-':
-               		 if (error & 0b0010000000) :
-				    self.BatteryPowerValue.SetBackgroundColour('#FF0000')
+                         if (error & 0b0010000000) :
+                                    self.BatteryPowerValue.SetBackgroundColour('#FF0000')
                          else:
                                 self.BatteryPowerValue.SetBackgroundColour('#00FF00')
                 if self.BatteryDischargesValue.GetLabel() !='-':
