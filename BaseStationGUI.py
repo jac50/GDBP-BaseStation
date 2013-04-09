@@ -9,6 +9,7 @@ import serial
 
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
+EVT_UPDATECONNECTIONSTATUS_ID = wx.NewId()
 DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus ErrorStates")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
 
@@ -17,6 +18,8 @@ def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
 def EVT_UPDATESTATUS(win,func):        
         win.Connect(-1,01,EVT_UPDATESTATUS_ID,func)
+def EVT_UPDATECONNECTIONSTATUS(win,func):
+        win.Connect(-1,01,EVT_UPDATECONNECTIONSTATUS_ID,func)
 class ResultEvent(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
@@ -27,11 +30,17 @@ class UpdateStatusEvent(wx.PyEvent):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_UPDATESTATUS_ID)
                 self.data = data
-                
+class UpdateConnectionStatus(wx.PyEvent):
+        def __init__(self,data):
+                wx.PyEvent.__init__(self)
+                self.SetEventType(EVT_UPDATECONNECTIONSTATUS_ID)
+                self.data = data                
 class FlareDataWorker(Thread):
         ExitCode = 0
         FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
-        port = serial.Serial(timeout=5) #9600, 8, N, 1
+        port = serial.Serial() #9600, 8, N, 1
+        port.port = 0
+        port.baudrate = 9600
         def __init__(self,wxObject):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -97,7 +106,7 @@ class FlareDataWorker(Thread):
                         #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         
                         self.PackPacket() # only used for testing
-                        #self.ReceiveData() #commented until transceiver has been built
+                        self.ReceiveData() #commented until transceiver has been built
                         error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
@@ -106,11 +115,16 @@ class FlareDataWorker(Thread):
                         time.sleep(1)
         def ReceiveData(self):
                # ---- Function used to retrieve and format the received signal correctly ----
-               self.port.open()
-               self.rpacket = self.port.read(15)
-               self.port.close()
-               self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits
-               print bin(self.rpacket) #test line to ensure that the read works																											                   
+               try:
+                       self.port.open()
+               except serial.SerialException:
+                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
+               else:
+                       wx.PostEvent(self.wxOBject,UpdateConnectionStatus(True))
+                       self.rpacket = self.port.read(15)
+                       self.port.close()
+               #self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits. only needed once the read works
+               #print bin(self.rpacket) #test line to ensure that the read works																											                   
         def PackPacket(self):
                 # --------------- This function is just here to Test. WILL NOT BE SENDING DATA TO FLARE ------------------------- #
                 startflag = 0b1001
@@ -165,7 +179,10 @@ class FlareDataWorker(Thread):
                 self.ExitCode = 1
 class ControlWorker(Thread):
         Commands = ControlParameters(0b11,0b1111,0b11,0b00001111,0b11) 
-       # port = serial.Serial(0)
+        port = serial.Serial()
+        port.baudrate = 9600
+        port.port = 0
+   
         def __init__(self,wxObject,args):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -175,17 +192,17 @@ class ControlWorker(Thread):
         def run(self):
                 wx.PostEvent(self.wxObject,UpdateStatusEvent("Packing Packet"))
                 self.PackPacket()
-               # self.SendPacket()
+                self.SendPacket()
                 wx.PostEvent(self.wxObject,UpdateStatusEvent("Sending Packet"))
                 wx.PostEvent(self.wxObject,UpdateStatusEvent(str(self.cpacket)))
         def PackPacket(self):
-                #Packet Shape
-                #Start flag          : 1100
-                #LEDCommands Flag    : 2 bit
-                #Light Intenisty Flag : 4 bit
-                #OptoKineticFlag     : 2 bit
-                #Directionality Flag : 8 bit
-                #Parachute Flag      : 2 bit
+                # Packet Shape
+                # Start flag          : 1100
+                # LEDCommands Flag    : 2 bit
+                # Light Intenisty Flag : 4 bit
+                # OptoKineticFlag     : 2 bit
+                # Directionality Flag : 8 bit
+                # Parachute Flag      : 2 bit
                 # CRC                :
                 # End Flag           : 0011
 
@@ -209,9 +226,14 @@ class ControlWorker(Thread):
                self.cpacket = self.cpacket << 4
                self.cpacket = self.cpacket + 0b0011
         def SendPacket(self):
-               self.port.open()
-               self.port.write(self.cpacket) # need to test this 
-               self.port.close()
+               try:
+                       self.port.open()
+               except serial.SerialException:
+                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
+               else:
+                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
+                       self.port.write(self.cpacket) # need to test this 
+                       self.port.close()
 
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
@@ -222,10 +244,18 @@ class MyFrame(wx.Frame):
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
                 EVT_UPDATESTATUS(self,self.UpdateStatus)
+		EVT_UPDATECONNECTIONSTATUS(self,self.UpdateConnectionStatus)
                 self.Show() 
         def UpdateStatus(self,msg):
                 t = msg.data
                 self.StatusBar.SetStatusText(t)
+        def UpdateConnectionStatus(self,msg):
+                t = msg.data
+                if (t==True):
+                        self.ConnectionStatusValue.SetLabel("Connected")
+                else:
+                        self.ConnectionStatusValue.SetLabel("Not Connected")
+        
         def ParachuteBtnPress(self,evt):
                 if self.ParachuteStatusValue.GetLabel() == "OPEN":
                         self.StatusBar.SetStatusText('Parachute is already opened')
