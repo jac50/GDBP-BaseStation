@@ -311,13 +311,22 @@ class MyFrame(wx.Frame):
                 self.AltitudeValue.SetLabel(str(t.Altitude))
                 if t.ParachuteStatus:
                         self.ParachuteStatusValue.SetLabel('OPEN')
-                else: self.ParachuteStatusValue.SetLabel('CLOSE')
+                        self.ParachuteBtn.Disable()
+                else: 
+                        self.ParachuteStatusValue.SetLabel('CLOSE')
+                        self.ParachuteBtn.Enable()
                 if t.LEDStatus:
                         self.LEDStatusValue.SetLabel('ON')
-                else: self.LEDStatusValue.SetLabel('OFF')
+                        self.LEDBtn.SetLabel('Turn Off')
+                else: 
+                        self.LEDStatusValue.SetLabel('OFF')
+                        self.LEDBtn.SetLabel('Turn On')
                 if t.OptoKineticStatus:
                         self.OptoKineticStatusValue.SetLabel('ON')
-                else: self.OptoKineticStatusValue.SetLabel('OFF')
+                        self.OptoKineticBtn.SetLabel('Turn Off')            
+                else:
+                        self.OptoKineticStatusValue.SetLabel('OFF')
+                        self.OptoKineticBtn.SetLabel('Turn On')
                 self.StatusBar.SetStatusText('Ready')
                 self.updateGUI(0,t.ErrorStates)
         def SendCommandFnc(self,evt):
