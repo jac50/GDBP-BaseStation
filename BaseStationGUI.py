@@ -5,7 +5,6 @@ import wx
 from collections import namedtuple
 import crcmod
 import serial
-#import bitstring
 
 
 EVT_RESULT_ID=wx.NewId()
@@ -98,7 +97,7 @@ class FlareDataWorker(Thread):
                         #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         
                         self.PackPacket() # only used for testing
-                        #self.ReceiveData()
+                        #self.ReceiveData() #commented until transceiver has been built
                         error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
@@ -107,7 +106,9 @@ class FlareDataWorker(Thread):
                         time.sleep(1)
         def ReceiveData(self):
                # ---- Function used to retrieve and format the received signal correctly ----
-               #self.rpacket = self.port.read(15)
+               self.port.open()
+               self.rpacket = self.port.read(15)
+               self.port.close()
                self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits
                print bin(self.rpacket) #test line to ensure that the read works																											                   
         def PackPacket(self):
