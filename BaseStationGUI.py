@@ -244,7 +244,7 @@ class MyFrame(wx.Frame):
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
                 EVT_UPDATESTATUS(self,self.UpdateStatus)
-		EVT_UPDATECONNECTIONSTATUS(self,self.UpdateConnectionStatus)
+                EVT_UPDATECONNECTIONSTATUS(self,self.UpdateConnectionStatus)
                 self.Show() 
         def UpdateStatus(self,msg):
                 t = msg.data
