@@ -123,7 +123,7 @@ class FlareDataWorker(Thread):
                except serial.SerialException:
                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
                else:
-                       wx.PostEvent(self.wxOBject,UpdateConnectionStatus(True))
+                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
                        self.rpacket = self.port.read(15)
                        self.port.close()
                #self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits. only needed once the read works
@@ -248,7 +248,7 @@ class MyFrame(wx.Frame):
                 self.populateGUI()
                 EVT_RESULT(self,self.updateDisplay)
                 EVT_UPDATESTATUS(self,self.UpdateStatus)
-		EVT_UPDATECONNECTIONSTATUS(self,self.UpdateConnectionStatus)
+                EVT_UPDATECONNECTIONSTATUS(self,self.UpdateConnectionStatus)
                 self.Show() 
         def UpdateStatus(self,msg):
                 t = msg.data
@@ -465,7 +465,8 @@ class MyFrame(wx.Frame):
                 
                 #Machine ID
                 self.FlareIDLabel = wx.StaticText(panel,label = 'Machine ID:', pos=(10,5))
-                self.FlareIDValue= wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(30,5),size=(100,15))
+                self.FlareIDValue= wx.ComboBox(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(70,5),size=(100,15))
+                #Currently staticText. Will make it a dropdown menu.
                 self.FlareIDLabel.SetFont(standardfont)
                 self.FlareIDValue.SetFont(standardfont) 
                 #Status Bar
