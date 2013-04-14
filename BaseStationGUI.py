@@ -106,7 +106,8 @@ class FlareDataWorker(Thread):
                         #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         
                         self.PackPacket() # only used for testing
-                        self.ReceiveData() #commented until transceiver has been built
+                        print self.rpacket
+                        #self.ReceiveData() #commented until transceiver has been built
                         error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
@@ -120,7 +121,7 @@ class FlareDataWorker(Thread):
                except serial.SerialException:
                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
                else:
-                       wx.PostEvent(self.wxOBject,UpdateConnectionStatus(True))
+                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
                        self.rpacket = self.port.read(15)
                        self.port.close()
                #self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits. only needed once the read works
