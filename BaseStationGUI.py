@@ -40,7 +40,7 @@ class FlareDataWorker(Thread):
         ExitCode = 0
         FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
         port = serial.Serial() #9600, 8, N, 1
-        port.port = 2 #Device is on Port 3
+        port.port = 2 #Device is on Port 3. Zero Indexed
         port.baudrate = 9600
         def __init__(self,wxObject):
                 Thread.__init__(self)
@@ -114,6 +114,7 @@ class FlareDataWorker(Thread):
                                 continue
                         wx.PostEvent(self.wxObject,ResultEvent(self.FlareData)) #send to GUI                                               
                         time.sleep(1)
+
         def ReceiveData(self):
                # ---- Function used to retrieve and format the received signal correctly ----
       
@@ -191,7 +192,7 @@ class ControlWorker(Thread):
         Commands = ControlParameters(0b11,0b1111,0b11,0b00001111,0b11) 
         port = serial.Serial()
         port.baudrate = 9600
-        port.port = 3 #Device is on Port 3
+        port.port = 2 #Device is on Port 3. Zero Indexed
    
         def __init__(self,wxObject,args):
                 Thread.__init__(self)
