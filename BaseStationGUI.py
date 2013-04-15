@@ -109,7 +109,6 @@ class FlareDataWorker(Thread):
                         #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         
                         self.PackPacket() # only used for testing
-                        print self.rpacket
                         #self.ReceiveData() #commented until transceiver has been built
                         error = self.UnpackPacket()
                         if error == -1:
@@ -465,7 +464,7 @@ class MyFrame(wx.Frame):
                 self.Bind(wx.EVT_BUTTON,self.OnStart,self.StartButton)
                 
                 #Machine ID
-                self.FlareIDLabel = wx.StaticText(panel,label = 'Machine ID:', pos=(10,5))
+                self.FlareIDLabel = wx.StaticText(panel,label = 'Flare ID:', pos=(10,5))
                 self.FlareIDValue= wx.ComboBox(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(70,2),size=(100,15))
                 #Currently staticText. Will make it a dropdown menu.
                 self.FlareIDLabel.SetFont(standardfont)
