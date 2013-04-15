@@ -38,9 +38,10 @@ class UpdateConnectionStatus(wx.PyEvent):
                 self.data = data                
 class FlareDataWorker(Thread):
         ExitCode = 0
+        allowed = True
         FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
         port = serial.Serial() #9600, 8, N, 1
-        port.port = 2 #Device is on Port 3. Zero Indexed
+        port.port = 5 #Device is on Port 3. Zero Indexed. Port 6 on Netbook
         port.baudrate = 9600
         def __init__(self,wxObject):
                 Thread.__init__(self)
@@ -115,20 +116,24 @@ class FlareDataWorker(Thread):
 
         def ReceiveData(self):
                # ---- Function used to retrieve and format the received signal correctly ----
-      
-                try:
-                       self.port.open()
-                except serial.SerialException as e :
-                       print "Error({0}): {1}".format(e.errno,e.strerror)
-                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
+                if (self.allowed):
+                        try:
+                               self.port.open()
+                        except serial.SerialException as e :
+                               print "Error({0}): {1}".format(e.errno,e.strerror)
+                               wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
+                        else:
+                               handshake = '0110001'
+                               self.port.write(handshake) #Handshake
+                               response = self.port.read(7)         
+                               wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
+                               self.rpacket = int(self.port.read(38))                       
+                               self.port.close()
+        def ToggleAllowed(self):
+                if self.allowed:
+                        self.allowed = False
                 else:
-                       handshake = '0110001'
-                       self.port.write(handshake) #Handshake
-                       response = self.port.read(7)         
-                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
-                       self.rpacket = int(self.port.read(38))                       
-                       self.port.close()
-               																										                   
+                        self.allowed = True
       
 
         def Abort(self):
@@ -137,8 +142,8 @@ class ControlWorker(Thread):
         Commands = ControlParameters(0b11,0b1111,0b11,0b00001111,0b11) 
         port = serial.Serial()
         port.baudrate = 9600
-        port.port = 2 #Device is on Port 3. Zero Indexed
-   
+        port.port = 5 #Device is on Port 3. Zero Indexed. Port 6 on Netbook
+        port.timeout = 0.05   
         def __init__(self,wxObject,args):
                 Thread.__init__(self)
                 self.wxObject = wxObject
@@ -149,8 +154,7 @@ class ControlWorker(Thread):
                 wx.PostEvent(self.wxObject,UpdateStatusEvent("Packing Packet"))
                 self.PackPacket()
                 self.SendPacket()
-                wx.PostEvent(self.wxObject,UpdateStatusEvent("Sending Packet"))
-                wx.PostEvent(self.wxObject,UpdateStatusEvent(str(self.cpacket)))
+                wx.PostEvent(self.wxObject,UpdateStatusEvent("Packet Sent"))
         def PackPacket(self):
                 # Packet Shape
                 # Start flag          : 1100
@@ -173,7 +177,7 @@ class ControlWorker(Thread):
                self.cpacket = self.cpacket + self.Commands.Directionality
                self.cpacket = self.cpacket << 2
                self.cpacket = self.cpacket + self.Commands.ParachuteCommand
-               # GenerateC CRC
+               # Generate CRC
                data = 0b0000111111111111111111
                crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                crc = crc32_func(str(data))
@@ -182,14 +186,20 @@ class ControlWorker(Thread):
                self.cpacket = self.cpacket << 4
                self.cpacket = self.cpacket + 0b0011
         def SendPacket(self):
-               try:
+                try:
                        self.port.open()
-               except serial.SerialException:
+                except serial.SerialException as e :
+                       print "Error({0}): {1}".format(e.errno,e.strerror)
                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
-               else:
-                       wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
-                       self.port.write(self.cpacket) # need to test this 
-                       self.port.close()
+                else:
+                        handshake = '1001110'
+                        self.port.write(handshake) #Handshake
+                        response = self.port.read(7)
+                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
+                        self.port.write(self.cpacket)
+                        self.response = self.port.readline()                                                                      
+                        print self.response
+                        self.port.close()
 
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
@@ -286,8 +296,10 @@ class MyFrame(wx.Frame):
                 self.StatusBar.SetStatusText('Ready')
                 self.updateGUI(0,t.ErrorStates)
         def SendCommandFnc(self,evt):
-                self.StatusBar.SetStatusText('Collating Commands to Send')                
+                self.StatusBar.SetStatusText('Collating Commands to Send')
+                self.worker.ToggleAllowed()
                 self.controlthread = ControlWorker(self,self.controlparameters)
+                self.worker.ToggleAllowed()
                 self.StatusBar.SetStatusText('Commands Sent to Background Thread')
                 
                 #Logic to Disable buttons after commands have been sent
