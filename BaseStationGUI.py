@@ -297,9 +297,11 @@ class MyFrame(wx.Frame):
                 self.updateGUI(0,t.ErrorStates)
         def SendCommandFnc(self,evt):
                 self.StatusBar.SetStatusText('Collating Commands to Send')
-                self.worker.ToggleAllowed()
+                if self.worker != None:             
+                        self.worker.ToggleAllowed()
                 self.controlthread = ControlWorker(self,self.controlparameters)
-                self.worker.ToggleAllowed()
+                if self.worker !=None:
+                        self.worker.ToggleAllowed()
                 self.StatusBar.SetStatusText('Commands Sent to Background Thread')
                 
                 #Logic to Disable buttons after commands have been sent
