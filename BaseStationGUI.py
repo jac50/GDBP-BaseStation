@@ -147,7 +147,7 @@ class ControlWorker(Thread):
         def __init__(self,wxObject,args):
                 Thread.__init__(self)
                 self.wxObject = wxObject
-                self.commands = args
+                self.Commands = args
                 self.start()
                 self.cpacket = 0b00
         def run(self):
