@@ -104,9 +104,7 @@ class FlareDataWorker(Thread):
                 while (self.ExitCode == 0):                 
                         #Receive Data
                         #unpack packet and add to DataPacket Variable declared above.
-                        #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
-                        
-                        self.PackPacket() # only used for testing
+                                               
                         self.ReceiveData() #commented until transceiver has been built
                         error = self.UnpackPacket()
                         if error == -1:
@@ -124,67 +122,14 @@ class FlareDataWorker(Thread):
                        print "Error({0}): {1}".format(e.errno,e.strerror)
                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
                 else:
-                       print "port open"
-                       self.port.write('0110001') #Handshake
-                       while 1:
-                               response = self.port.read(7)
-                               print response
-                       
+                       handshake = '0110001'
+                       self.port.write(handshake) #Handshake
+                       response = self.port.read(7)         
                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
-                       self.rpacket = self.port.read(38)
-                       print self.rpacket
+                       self.rpacket = int(self.port.read(38))                       
                        self.port.close()
-               #self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits. only needed once the read works
-               #print bin(self.rpacket) #test line to ensure that the read works																											                   
-        def PackPacket(self):
-                # --------------- This function is just here to Test. WILL NOT BE SENDING DATA TO FLARE ------------------------- #
-                startflag = 0b1001
-                endflag = 0b1010
-                crc = 0b0
-                self.rpacket = startflag
-                self.rpacket = self.rpacket << 8
-                
-                self.rpacket = self.rpacket + self.FlareData.BatteryVoltage
-                self.rpacket = self.rpacket << 8
-                self.rpacket = self.rpacket + self.FlareData.BatteryCurrent
-                self.rpacket = self.rpacket << 12
-                self.rpacket = self.rpacket + self.FlareData.BatteryPower
-                self.rpacket = self.rpacket << 8
-                self.rpacket = self.rpacket + self.FlareData.DischargeCycles
-                self.rpacket = self.rpacket << 8
-                self.rpacket = self.rpacket + self.FlareData.BatteryTemp
-                self.rpacket = self.rpacket << 8
-                self.rpacket = self.rpacket + self.FlareData.SystemTemp
-                self.rpacket = self.rpacket << 12
-                self.rpacket = self.rpacket + self.FlareData.Altitude
-                self.rpacket = self.rpacket << 4
-                if (self.FlareData.ParachuteStatus == True):
-                        self.rpacket = self.rpacket + 0b1111
-                else :
-                        self.rpacket = self.rpacket + 0b0000
-                self.rpacket = self.rpacket << 4
-                if (self.FlareData.LEDStatus == True):
-                        self.rpacket = self.rpacket + 0b1111
-                else :
-                        self.rpacket = self.rpacket + 0b0000
-                self.rpacket = self.rpacket << 4
-                if (self.FlareData.OptoKineticStatus == True):
-                        self.rpacket = self.rpacket + 0b1111
-                else :
-                        self.rpacket = self.rpacket + 0b0000
-                self.rpacket = self.rpacket << 10
-                self.rpacket = self.rpacket + self.FlareData.ErrorStates
-                # Calculating CRC32              
-                data = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-                crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
-                crc = crc32_func(str(data))
-
-                self.rpacket = self.rpacket << 32
-                
-                self.rpacket = self.rpacket + crc
-                
-                self.rpacket = self.rpacket << 4
-                self.rpacket = self.rpacket + endflag
+               																										                   
+      
 
         def Abort(self):
                 self.ExitCode = 1
