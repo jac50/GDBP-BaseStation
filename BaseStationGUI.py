@@ -37,7 +37,7 @@ class UpdateConnectionStatus(wx.PyEvent):
                 self.data = data                
 class FlareDataWorker(Thread):
         ExitCode = 0
-        FlareData = DataPacket(1,40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
+        FlareData = DataPacket(1,40,30,1200,2,50,70,800,True,True,False, 0b000000000000000)
         port = serial.Serial() #9600, 8, N, 1
         port.port = 0
         port.baudrate = 9600
@@ -65,7 +65,7 @@ class FlareDataWorker(Thread):
                 # CRC               :32bit
                 # End Sequence      :1010               
                 # Total Size        :120 bit
-                
+
                 self.rpacket = self.rpacket >> 4
                 crcrec = self.rpacket & 0b11111111111111111111111111111111
                 #Calculate CRC and check if it's equal.
@@ -241,7 +241,7 @@ class ControlWorker(Thread):
 
 class MyFrame(wx.Frame):
         def __init__(self,parent,title):
-                super(MyFrame,self).__init__(parent,title=title,size=(550,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+                super(MyFrame,self).__init__(parent,title=title,size=(580,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
                 self.worker = None # No worker thread yet
                 self.controlparameters = ControlParameters(False,False,False,0,0)
                 self.InitUI()
@@ -358,7 +358,8 @@ class MyFrame(wx.Frame):
                 standardfont = wx.Font(8,wx.SWISS,wx.NORMAL,wx.NORMAL)
                 #Battery Information
                 
-                self.BatteryStaticBox = wx.StaticBox(panel,label = 'Battery Information',pos=(290,20),size=(225,120))
+                self.BatteryStaticBox = wx.StaticBox(panel,label = 'Battery Information',pos=(290,20),size=(275,120))
+                self.BatteryLabel = wx.StaticText(panel,label='Primary',pos=(460,25))
                 self.BatteryVoltageLabel = wx.StaticText(panel,label='Voltage (V)',style=wx.ALIGN_CENTRE,pos=(300,40))
                 self.BatteryVoltageValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,40),size=(50,15))
                 self.BatteryCurrentLabel = wx.StaticText(panel,label='Current (I)',style=wx.ALIGN_CENTRE,pos=(300,60))
@@ -381,6 +382,20 @@ class MyFrame(wx.Frame):
                 self.BatteryTemperatureLabel.SetFont(standardfont)
                 self.BatteryTemperatureValue.SetFont(standardfont)
                 
+                #Auxilary Battery Information
+
+                self.AuxBatteryLabel = wx.StaticText(panel,label='Auxillary',pos=(515,25))
+                self.AuxBatteryVoltageValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(510,40),size=(50,15))
+                self.AuxBatteryCurrentValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(510,60),size=(50,15))
+                self.AuxBatteryPowerValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(510,80),size=(50,15))
+                self.AuxBatteryDischargesValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(510,100),size=(50,15))
+                self.AuxBatteryTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(510,120),size=(50,15))
+                
+                self.AuxBatteryVoltageValue.SetFont(standardfont)
+                self.AuxBatteryCurrentValue.SetFont(standardfont)
+                self.AuxBatteryPowerValue.SetFont(standardfont)
+                self.AuxBatteryDischargesValue.SetFont(standardfont)
+                self.AuxBatteryTemperatureValue.SetFont(standardfont)
                 
                 #System Information
                 self.ControlStaticBox = wx.StaticBox(panel,label='Control',pos=(5,20),size=(270,250))
@@ -485,60 +500,104 @@ class MyFrame(wx.Frame):
                 self.ParachuteStatusValue.SetLabel('-')
                 self.LEDStatusValue.SetLabel('-')
                 self.OptoKineticStatusValue.SetLabel('-')
+                self.AuxBatteryVoltageValue.SetLabel('-')
+                self.AuxBatteryCurrentValue.SetLabel('-')
+                self.AuxBatteryPowerValue.SetLabel('-')
+                self.AuxBatteryDischargesValue.SetLabel('-')
+                self.AuxBatteryTemperatureValue.SetLabel('-')
                 self.ConnectionStatusValue.SetLabel('Not Connected')
                 self.FlareIDValue.SetLabel('Not Connected')
                          
         def updateGUI(self,evt,error):
+                # ----- Error State Flags ------
+                # Bit 0: Primary Battery Voltage Error
+                # Bit 1: Primary Battery Current Error
+                # Bit 2: Primary Battery Power Error
+                # Bit 3: Primary Battery Discharge Value Error
+                # Bit 4: Primary Battery Temperature Error
+                # Bit 5: Aux Battery Voltage Error
+                # Bit 6: Aux Battery Current Error
+                # Bit 7: Aux Battery Power Error
+                # Bit 8: Aux Battery Discharge Value Error
+                # Bit 9: Aux Battery Temperature Error
+                # Bit 10:
+                # Bit 11
                 
                 #Update Box Colours
                 if self.BatteryVoltageValue.GetLabel() !='-':
-                        if (error & 0b1000000000) :
+                        if (error & 0b100000000000000) :
                                 self.BatteryVoltageValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.BatteryVoltageValue.SetBackgroundColour('#00FF00')
                 if self.BatteryCurrentValue.GetLabel() !='-':
-                        if (error & 0b0100000000) : 
+                        if (error & 0b010000000000000) : 
                                 self.BatteryCurrentValue.SetBackgroundColour('#FF0000')
                         else:   
                                 self.BatteryCurrentValue.SetBackgroundColour('#00FF00')
                 if self.BatteryPowerValue.GetLabel() != '-':
-                         if (error & 0b0010000000) :
+                         if (error & 0b001000000000000) :
                                     self.BatteryPowerValue.SetBackgroundColour('#FF0000')
                          else:
                                 self.BatteryPowerValue.SetBackgroundColour('#00FF00')
                 if self.BatteryDischargesValue.GetLabel() !='-':
-                        if (error & 0b0001000000) : 
+                        if (error & 0b0001000000000000) : 
                                 self.BatteryDischargesValue.SetBackgroundColour('#FF0000')
-                        else: self.BatteryDischargesValue.SetBackgroundColour('#00FF00')     
+                        else:
+                                self.BatteryDischargesValue.SetBackgroundColour('#00FF00')     
                 if self.BatteryTemperatureValue.GetLabel() != '-':
-                        if (error & 0b0000100000) : 
+                        if (error & 0b0000100000000000) : 
                                 self.BatteryTemperatureValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.BatteryTemperatureValue.SetBackgroundColour('#00FF00')
+                if self.AuxBatteryVoltageValue.GetLabel()!='-':
+                        if (error &  0b0000010000000000):
+                                self.AuxBatteryVoltageValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.AuxBatteryVoltageValue.SetBackgroundColour('#00FF00')
+                if self.AuxBatteryCurrentValue.GetLabel() !='-':
+                        if (error &  0b000000100000000) : 
+                                self.AuxBatteryCurrentValue.SetBackgroundColour('#FF0000')
+                        else:   
+                                self.AuxBatteryCurrentValue.SetBackgroundColour('#00FF00')
+                if self.AuxBatteryPowerValue.GetLabel() != '-':
+                         if (error & 0b000000010000000) :
+                                    self.AuxBatteryPowerValue.SetBackgroundColour('#FF0000')
+                         else:
+                                self.AuxBatteryPowerValue.SetBackgroundColour('#00FF00')
+                if self.AuxBatteryDischargesValue.GetLabel() !='-':
+                        if (error &  0b000000001000000) : 
+                                self.AuxBatteryDischargesValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.AuxBatteryDischargesValue.SetBackgroundColour('#00FF00')     
+                if self.AuxBatteryTemperatureValue.GetLabel() != '-':
+                        if (error &  0b000000000100000) : 
+                                self.AuxBatteryTemperatureValue.SetBackgroundColour('#FF0000')
+                        else:
+                                self.AuxBatteryTemperatureValue.SetBackgroundColour('#00FF00')
                 if self.SystemTemperatureValue.GetLabel() != '-':
-                        if (error & 0b0000010000) : 
+                        if (error & 0b000000000010000) : 
                                 self.SystemTemperatureValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.SystemTemperatureValue.SetBackgroundColour('#00FF00')
 
                 if self.AltitudeValue.GetLabel()!='-':
-                        if (error & 0b0000001000) : 
+                        if (error & 0b000000000001000) : 
                                 self.AltitudeValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.AltitudeValue.SetBackgroundColour('#00FF00')
                     
                 if self.ParachuteStatusValue.GetLabel()!='-':
-                        if (error & 0b0000000100) : 
+                        if (error & 0b000000000000100) : 
                                 self.ParachuteStatusValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.ParachuteStatusValue.SetBackgroundColour('#00FF00')
                 if self.LEDStatusValue.GetLabel()!='-':
-                        if (error & 0b0000000010) : 
+                        if (error & 0b000000000000010) : 
                                 self.LEDStatusValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.LEDStatusValue.SetBackgroundColour('#00FF00')
                 if self.OptoKineticStatusValue.GetLabel()!='-':
-                        if (error & 0b0000000001):
+                        if (error & 0b000000000000001):
                                 self.OptoKineticStatusValue.SetBackgroundColour('#FF0000')
                         else:
                                 self.OptoKineticStatusValue.SetBackgroundColour('#00FF00')
