@@ -221,7 +221,7 @@ class ControlWorker(Thread):
                self.cpacket = self.cpacket + self.Commands.Directionality
                self.cpacket = self.cpacket << 2
                self.cpacket = self.cpacket + self.Commands.ParachuteCommand
-               # GenerateC CRC
+               # Generate CRC
                data = 0b0000111111111111111111
                crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                crc = crc32_func(str(data))
@@ -465,7 +465,7 @@ class MyFrame(wx.Frame):
                 
                 #Machine ID
                 self.FlareIDLabel = wx.StaticText(panel,label = 'Machine ID:', pos=(10,5))
-                self.FlareIDValue= wx.ComboBox(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(70,5),size=(100,15))
+                self.FlareIDValue= wx.ComboBox(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(70,2),size=(100,15))
                 #Currently staticText. Will make it a dropdown menu.
                 self.FlareIDLabel.SetFont(standardfont)
                 self.FlareIDValue.SetFont(standardfont) 
