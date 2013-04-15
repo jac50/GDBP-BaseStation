@@ -125,7 +125,7 @@ class FlareDataWorker(Thread):
                        self.rpacket = self.port.read(15)
                        self.port.close()
                #self.rpacket = self.rpacket >> 4 #truncates the last 4 bits as the packet isnt a whole number of bits. only needed once the read works
-               #print bin(self.rpacket) #test line to ensure that the read works																											                   
+               #print bin(self.rpacket) #test line to ensure that the read works                                                                                                                                                                                                                                           
         def PackPacket(self):
                 # --------------- This function is just here to Test. WILL NOT BE SENDING DATA TO FLARE ------------------------- #
                 startflag = 0b1001
