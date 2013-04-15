@@ -10,7 +10,7 @@ import serial
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 EVT_UPDATECONNECTIONSTATUS_ID = wx.NewId()
-DataPacket = namedtuple("DataPacket","BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus ErrorStates")                
+DataPacket = namedtuple("DataPacket","FlareID BatteryVoltage BatteryCurrent BatteryPower DischargeCycles BatteryTemp SystemTemp Altitude ParachuteStatus LEDStatus OptoKineticStatus ErrorStates")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
 
 
@@ -37,7 +37,7 @@ class UpdateConnectionStatus(wx.PyEvent):
                 self.data = data                
 class FlareDataWorker(Thread):
         ExitCode = 0
-        FlareData = DataPacket(40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
+        FlareData = DataPacket(1,40,30,1200,2,50,70,800,True,True,False, 0b0000000000)
         port = serial.Serial() #9600, 8, N, 1
         port.port = 0
         port.baudrate = 9600
@@ -50,6 +50,7 @@ class FlareDataWorker(Thread):
         def UnpackPacket(self):
                 # Packet Shape
                 # Start Sequence    :1001
+                # Flare ID          :4 bit
                 # Voltage           :8 bit
                 # Current           :8 bit
                 # Power             :12 bit
@@ -63,7 +64,7 @@ class FlareDataWorker(Thread):
                 # ErrorStateFlags   :10 bit
                 # CRC               :32bit
                 # End Sequence      :1010               
-                # Total Size        :116 bit
+                # Total Size        :120 bit
                 
                 self.rpacket = self.rpacket >> 4
                 crcrec = self.rpacket & 0b11111111111111111111111111111111
@@ -97,6 +98,8 @@ class FlareDataWorker(Thread):
                 Current = self.rpacket & 0b11111111
                 self.rpacket = self.rpacket >> 8
                 Voltage = self.rpacket & 0b11111111
+                self.rpacket = self.rpacket >> 8
+                FlareID = self.rpacket & 0b1111
                 self.rpacket = self.rpacket >> 4
 
         def run(self):
@@ -132,8 +135,9 @@ class FlareDataWorker(Thread):
                 endflag = 0b1010
                 crc = 0b0
                 self.rpacket = startflag
+                self.rpacket = self.rpacket << 4
+                self.rpacket = self.rpacket + self.FlareData.FlareID
                 self.rpacket = self.rpacket << 8
-                
                 self.rpacket = self.rpacket + self.FlareData.BatteryVoltage
                 self.rpacket = self.rpacket << 8
                 self.rpacket = self.rpacket + self.FlareData.BatteryCurrent
@@ -218,7 +222,7 @@ class ControlWorker(Thread):
                self.cpacket = self.cpacket + self.Commands.Directionality
                self.cpacket = self.cpacket << 2
                self.cpacket = self.cpacket + self.Commands.ParachuteCommand
-               # GenerateC CRC
+               # Generate CRC
                data = 0b0000111111111111111111
                crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                crc = crc32_func(str(data))
@@ -303,6 +307,7 @@ class MyFrame(wx.Frame):
         def updateDisplay(self,msg):
                 t = msg.data
                 self.StatusBar.SetStatusText('Data Received')
+                self.FlareIDValue.SetLabel(str(t.FlareID))
                 self.BatteryVoltageValue.SetLabel(str(t.BatteryVoltage))
                 self.BatteryCurrentValue.SetLabel(str(t.BatteryCurrent))
                 self.BatteryPowerValue.SetLabel(str(t.BatteryPower))
@@ -443,7 +448,8 @@ class MyFrame(wx.Frame):
                 #Connection Status
                 self.ConnectionStatusLabel = wx.StaticText(panel,label = 'Connection Status:',pos=(320,5))
                 self.ConnectionStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(420,5),size=(100,15))
-
+                self.ConnectionStatusLabel.SetFont(standardfont)
+                self.ConnectionStatusValue.SetFont(standardfont)
                 
 
                 #Event Listeners
@@ -457,8 +463,13 @@ class MyFrame(wx.Frame):
                 self.Bind(wx.EVT_BUTTON,self.openMap,self.MapButton)
                 self.Bind(wx.EVT_BUTTON,self.SendCommandFnc,self.SendCommandBtn)
                 self.Bind(wx.EVT_BUTTON,self.OnStart,self.StartButton)
-
                 
+                #Machine ID
+                self.FlareIDLabel = wx.StaticText(panel,label = 'Machine ID:', pos=(10,5))
+                self.FlareIDValue= wx.ComboBox(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(70,2),size=(100,15))
+                #Currently staticText. Will make it a dropdown menu.
+                self.FlareIDLabel.SetFont(standardfont)
+                self.FlareIDValue.SetFont(standardfont) 
                 #Status Bar
                 self.StatusBar = self.CreateStatusBar()
                 self.StatusBar.SetStatusText('Ready')
@@ -476,8 +487,8 @@ class MyFrame(wx.Frame):
                 self.LEDStatusValue.SetLabel('-')
                 self.OptoKineticStatusValue.SetLabel('-')
                 self.ConnectionStatusValue.SetLabel('Not Connected')
-                
-        
+                self.FlareIDValue.SetLabel('Not Connected')
+                         
         def updateGUI(self,evt,error):
                 
                 #Update Box Colours
@@ -536,6 +547,10 @@ class MyFrame(wx.Frame):
                         self.ConnectionStatusValue.SetBackgroundColour('#FF0000')
                 else:
                         self.ConnectionStatusValue.SetBackgroundColour('#00FF00')
+                if self.FlareIDLabel.GetLabel() == "Not Connected":
+                        self.FlareIDValue.SetBackgroundColour('#FF0000')
+                else:
+                        self.FlareIDValue.SetBackgroundColour('#00FF00')
                 self.Refresh() # have to force a refresh or the colours won't update
         
 if __name__ == '__main__':
