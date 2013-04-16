@@ -109,7 +109,7 @@ class FlareDataWorker(Thread):
                         #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
                         
                         self.PackPacket() # only used for testing
-                        #self.ReceiveData() #commented until transceiver has been built
+                        self.ReceiveData() #commented until transceiver has been built
                         error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
