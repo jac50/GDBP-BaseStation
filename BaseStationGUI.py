@@ -48,6 +48,7 @@ class FlareDataWorker(Thread):
                 self.start()
                 self.ExitCode = 0
                 self.rpacket = 0b0
+                self.gpsData = 0b0
         def UnpackPacket(self):
                 # Packet Shape
                 # Start Sequence    :1001
@@ -130,6 +131,10 @@ class FlareDataWorker(Thread):
                                response = self.port.read(7)
                                wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
                                self.rpacket = int(self.port.read(38))
+                               self.gpsData = self.port.readline()
+                               #self.gpsData = self.port.read(47)
+                               print self.rpacket
+                               print self.gpsData
                                self.port.close()
         def ToggleAllowed(self):
                 if self.allowed:
@@ -347,7 +352,7 @@ class MyFrame(wx.Frame):
                 self.PrimBatteryPowerValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,80),size=(50,15))
                 self.PrimBatteryDischargesLabel = wx.StaticText(panel,label='Number of Discharge Cycles',style=wx.ALIGN_CENTRE,pos = (300,100))
                 self.PrimBatteryDischargesValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,100),size=(50,15))
-                self.PrimBatteryTemperatureLabel = wx.StaticText(panel,label='Temperature (C)',style=wx.ALIGN_CENTRE, pos = (300,120))
+                self.PrimBatteryTemperatureLabel = wx.StaticText(panel,label='Temperature (°C)',style=wx.ALIGN_CENTRE, pos = (300,120))
                 self.PrimBatteryTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(450,120),size=(50,15))
                 
                 self.PrimBatteryVoltageLabel.SetFont(standardfont)
@@ -359,6 +364,20 @@ class MyFrame(wx.Frame):
                 self.PrimBatteryDischargesLabel.SetFont(standardfont)
                 self.PrimBatteryDischargesValue.SetFont(standardfont)
                 self.PrimBatteryTemperatureLabel.SetFont(standardfont)
+
+                #Location Information
+
+                self.LocationBox = wx.StaticBox(panel,label = 'Location Information',pos=(570,20),size=(170,120))
+                self.BaseLatLabel = wx.StaticText(panel,label = 'Base Latitude',pos = (580,40),style = wx.ALIGN_CENTRE)
+                self.BaseLatValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,40),size=(50,15))
+                self.BaseLongLabel = wx.StaticText(panel,label = 'Base Longitude',pos = (580,60),style = wx.ALIGN_CENTRE)
+                self.BaseLongValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,60),size=(50,15))
+                self.FlareLatLabel = wx.StaticText(panel,label = 'Flare Latitude',pos = (580,80),style = wx.ALIGN_CENTRE)
+                self.FlareLatValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,80),size=(50,15))
+                self.FlareLongLabel = wx.StaticText(panel,label = 'Flare Longitude',pos = (580,100),style = wx.ALIGN_CENTRE)
+                self.FlareLongValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,100),size=(50,15))
+                
+                
                 
                 #Auxilary Battery Information
 
@@ -404,13 +423,13 @@ class MyFrame(wx.Frame):
 
                 #Temperature
                 self.TemperatureStaticBox=wx.StaticBox(panel,label='Temperatures',pos=(525,150),size=(225,120))
-                self.SystemTemperatureLabel = wx.StaticText(panel,label='System Temperature (C)',style=wx.ALIGN_CENTRE,pos = (535,170))
+                self.SystemTemperatureLabel = wx.StaticText(panel,label='System Temperature (°C)',style=wx.ALIGN_CENTRE,pos = (535,170))
                 self.SystemTemperatureValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(695,170),size=(50,15))
-                self.LEDLeftLabel = wx.StaticText(panel,label='LED Left Wing Temperature (C)',style=wx.ALIGN_CENTRE,pos=(535,190))
+                self.LEDLeftLabel = wx.StaticText(panel,label='LED Left Wing Temperature (°C)',style=wx.ALIGN_CENTRE,pos=(535,190))
                 self.LEDLeftValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(695,190),size=(50,15))
-                self.LEDRightLabel = wx.StaticText(panel,label='LED Right Wing Temperature (C)',style=wx.ALIGN_CENTRE,pos=(535,210))
+                self.LEDRightLabel = wx.StaticText(panel,label='LED Right Wing Temperature (°C)',style=wx.ALIGN_CENTRE,pos=(535,210))
                 self.LEDRightValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(695,210),size=(50,15))
-                self.OutsideLabel = wx.StaticText(panel,label='Outside Temperature (C)',style=wx.ALIGN_CENTRE,pos=(535,230))
+                self.OutsideLabel = wx.StaticText(panel,label='Outside Temperature (°C)',style=wx.ALIGN_CENTRE,pos=(535,230))
                 self.OutsideValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(695,230),size=(50,15))
                 
                 
@@ -509,6 +528,10 @@ class MyFrame(wx.Frame):
                 self.LEDLeftValue.SetLabel('-')
                 self.LEDRightValue.SetLabel('-')
                 self.OutsideValue.SetLabel('-')
+                self.BaseLatValue.SetLabel('-')
+                self.BaseLongValue.SetLabel('-')
+                self.FlareLatValue.SetLabel('-')
+                self.FlareLongValue.SetLabel('-')
                 self.ConnectionStatusValue.SetLabel('Not Connected')
                 self.FlareIDValue.SetLabel('Not Connected')
                          
