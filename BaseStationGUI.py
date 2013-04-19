@@ -101,6 +101,7 @@ class FlareDataWorker(Thread):
                         wx.PostEvent(self.wxObject,UpdateGPSLock(False))
                 else:
                         wx.PostEvent(self.wxObject,UpdateGPSLock(True))
+                print self.gpsData
                 
         def UnpackPacket(self):
                 
@@ -203,6 +204,7 @@ class FlareDataWorker(Thread):
                                wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
                                self.rpacket = int(self.port.read(55))
                                self.gpsData = self.port.readline()
+                               
                                self.port.close()
         def ToggleAllowed(self):
                 if self.allowed:
