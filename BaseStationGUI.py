@@ -10,7 +10,8 @@ import serial
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 EVT_UPDATECONNECTIONSTATUS_ID = wx.NewId()
-DataPacket = namedtuple("DataPacket","FlareID PrimBatteryVoltage AuxBatteryVoltage PrimBatteryCurrent AuxBatteryCurrent PrimBatteryPower AuxBatteryPower PrimDischargeCycles AuxDischargeCycles PrimBatteryTemp AuxBatteryTemp SystemTemp LEDLeft LEDRight Outside Altitude ParachuteStatus LEDStatus LEDBrightness OptoKineticStatus Acceleration ErrorStates BaseTime BaseLong BaseLat")                
+EVT_UPDATEGPSLOCK_ID = wx.NewId()
+DataPacket = namedtuple("DataPacket","FlareID PrimBatteryVoltage AuxBatteryVoltage PrimBatteryCurrent AuxBatteryCurrent PrimBatteryPower AuxBatteryPower PrimDischargeCycles AuxDischargeCycles PrimBatteryTemp AuxBatteryTemp SystemTemp LEDLeftTemp LEDRightTemp OutsideTemp Altitude ParachuteStatus LEDStatus LEDBrightness OptoKineticStatus Acceleration ErrorStates BaseTime BaseLong BaseLat")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
 
 
@@ -20,6 +21,8 @@ def EVT_UPDATESTATUS(win,func):
         win.Connect(-1,01,EVT_UPDATESTATUS_ID,func)
 def EVT_UPDATECONNECTIONSTATUS(win,func):
         win.Connect(-1,01,EVT_UPDATECONNECTIONSTATUS_ID,func)
+def EVT_UPDATEGPSLOCK(win,func):
+        win.Connect(-1,01,EVT_UPDATEGPSLOCK_ID,func)
 class ResultEvent(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
@@ -34,7 +37,12 @@ class UpdateConnectionStatus(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_UPDATECONNECTIONSTATUS_ID)
-                self.data = data                
+                self.data = data
+class UpdateGPSLock(wx.PyEvent):
+        def __init__(self,data):
+                wx.PyEvent.__init__(self)
+                self.SetEventType(EVT_UPDATEGPSLOCK_ID)
+                self.data = data
 class FlareDataWorker(Thread):
         ExitCode = 0
         allowed = True
@@ -70,7 +78,8 @@ class FlareDataWorker(Thread):
                 #         15: End of Message
                 
                 self.gpsDataArray = [x.strip() for x in self.gpsData.split(',')]
-                #Format Time
+
+                # ---- Format Time -----
                 time_int = int(float(self.gpsDataArray[1]))
                 
                 time_list = list(str(time_int))
@@ -86,7 +95,11 @@ class FlareDataWorker(Thread):
                                                            BaseLong = self.gpsDataArray[4] +self.gpsDataArray[5],
                                                          )
                 
-                
+                # Check if there is GPS Lock
+                if self.gpsDataArray[2] == '':
+                        wx.PostEvent(self.wxObject,UpdateGPSLock(False))
+                else:
+                        wx.PostEvent(self.wxObject,UpdateGPSLock(True))
                 
         def UnpackPacket(self):
                 # Packet Shape
@@ -106,12 +119,11 @@ class FlareDataWorker(Thread):
                 # CRC               :32bit
                 # End Sequence      :1010               
                 # Total Size        :120 bit
-
                 self.rpacket = self.rpacket >> 4
                 crcrec = self.rpacket & 0b11111111111111111111111111111111
                 #Calculate CRC and check if it's equal.
                 self.rpacket = self.rpacket >> 32
-                dataToCRC = self.rpacket & 0b00001111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+                dataToCRC = self.rpacket & 0x00008FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
                 crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                 crccalc = crc32_func(str(dataToCRC))
                 if crccalc!=crcrec:
@@ -121,25 +133,40 @@ class FlareDataWorker(Thread):
                 self.rFlareData = self.rFlareData._replace(ErrorStates = self.rpacket & 0b1111111111)
                 self.rpacket = self.rpacket >> 10
                 self.rFlareData = self.rFlareData._replace(OptoKineticStatus = self.rpacket & 0b1111)            
-                self.rpacket = self.rpacket >> 4                                                                                                                                        
+                self.rpacket = self.rpacket >> 4
+                self.rFlareData = self.rFlareData._replace(LEDBrightness = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
                 self.rFlareData = self.rFlareData._replace(LEDStatus = self.rpacket & 0b1111)
                 self.rpacket = self.rpacket >> 4
                 self.rFlareData = self.rFlareData._replace(ParachuteStatus = self.rpacket & 0b1111)
                 self.rpacket = self.rpacket >> 4
                 self.rFlareData = self.rFlareData._replace(Altitude = self.rpacket & 0b111111111111)
                 self.rpacket = self.rpacket >> 12
+                self.rFlareData = self.rFlareData._replace(OutsideTemp = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
+                self.rFlareData = self.rFlareData._replace(LEDRightTemp = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
+                self.rFlareData = self.rFlareData._replace(LEDLeftTemp = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
                 self.rFlareData = self.rFlareData._replace(SystemTemp = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
+                self.rFlareData = self.rFlareData._replace(AuxBatteryTemp = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
                 self.rFlareData = self.rFlareData._replace(PrimBatteryTemp = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
+                self.rFlareData = self.rFlareData._replace(AuxDischargeCycles = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
                 self.rFlareData = self.rFlareData._replace(PrimDischargeCycles = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
-                self.rFlareData = self.rFlareData._replace(PrimBatteryPower = self.rpacket & 0b1111111111111)
-                self.rpacket = self.rpacket >> 12
+                self.rFlareData = self.rFlareData._replace(AuxBatteryCurrent = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
                 self.rFlareData = self.rFlareData._replace(PrimBatteryCurrent = self.rpacket & 0b11111111)
+                self.rpacket = self.rpacket >> 8
+                self.rFlareData = self.rFlareData._replace(AuxBatteryVoltage = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
                 self.rFlareData = self.rFlareData._replace(PrimBatteryVoltage = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
+                
                 self.rFlareData = self.rFlareData._replace(FlareID = self.rpacket & 0b1111)
                 self.rpacket = self.rpacket >> 4
 
@@ -171,7 +198,7 @@ class FlareDataWorker(Thread):
                                self.port.write(handshake)
                                response = self.port.read(7)
                                wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
-                               self.rpacket = int(self.port.read(38))
+                               self.rpacket = int(self.port.read(54))
                                self.gpsData = self.port.readline()
                                #self.gpsData = self.port.read(47)
                                print self.rpacket
@@ -260,6 +287,7 @@ class MyFrame(wx.Frame):
                 EVT_RESULT(self,self.updateDisplay)
                 EVT_UPDATESTATUS(self,self.UpdateStatus)
                 EVT_UPDATECONNECTIONSTATUS(self,self.UpdateConnectionStatus)
+                EVT_UPDATEGPSLOCK(self,self.UpdateGPSLock)
                 self.Show() 
         def UpdateStatus(self,msg):
                 t = msg.data
@@ -270,6 +298,13 @@ class MyFrame(wx.Frame):
                         self.ConnectionStatusValue.SetLabel("Connected")
                 else:
                         self.ConnectionStatusValue.SetLabel("Not Connected")
+        def UpdateGPSLock(self,msg):
+                t = msg.data
+                if (t==True):
+                        self.GPSStatusValue.SetLabel("GPS Lock")
+                else:
+                        self.GPSStatusValue.SetLabel("No GPS Lock")
+                
         
         def ParachuteBtnPress(self,evt):
                 if self.ParachuteStatusValue.GetLabel() == "OPEN":
@@ -332,9 +367,9 @@ class MyFrame(wx.Frame):
                 self.LEDBrightnessValue.SetLabel(str(t.LEDBrightness))
                 self.AccelerationValue.SetLabel(str(t.Acceleration))
                 self.SystemTemperatureValue.SetLabel(str(t.SystemTemp))
-                self.LEDLeftValue.SetLabel(str(t.LEDLeft))
-                self.LEDRightValue.SetLabel(str(t.LEDRight))
-                self.OutsideValue.SetLabel(str(t.Outside))
+                self.LEDLeftValue.SetLabel(str(t.LEDLeftTemp))
+                self.LEDRightValue.SetLabel(str(t.LEDRightTemp))
+                self.OutsideValue.SetLabel(str(t.OutsideTemp))
                 if t.ParachuteStatus:
                         self.ParachuteStatusValue.SetLabel('OPEN')
                         self.ParachuteBtn.Disable()
@@ -583,6 +618,7 @@ class MyFrame(wx.Frame):
                 self.BaseLongValue.SetLabel('-')
                 self.FlareLatValue.SetLabel('-')
                 self.FlareLongValue.SetLabel('-')
+                self.GPSStatusValue.SetLabel('No GPS Lock')
                 self.ConnectionStatusValue.SetLabel('Not Connected')
                 self.FlareIDValue.SetLabel('Not Connected')
                          
@@ -710,8 +746,12 @@ class MyFrame(wx.Frame):
 
                 if self.FlareIDLabel.GetLabel() == "Not Connected":
                         self.FlareIDValue.SetBackgroundColour('#FF0000')
-                else:
+                else: 
                         self.FlareIDValue.SetBackgroundColour('#00FF00')
+                if self.GPSStatusValue.GetLabel()=="No GPS Lock":
+                        self.GPSStatusValue.SetBackgroundColour('#FF0000')
+                else:
+                        self.GPSStatusValue.SetBackgroundColour('#00FF00')
                 self.Refresh() # have to force a refresh or the colours won't update
         
 if __name__ == '__main__':
