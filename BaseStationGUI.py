@@ -102,6 +102,7 @@ class FlareDataWorker(Thread):
                         wx.PostEvent(self.wxObject,UpdateGPSLock(True))
                 
         def UnpackPacket(self):
+                
                 # Packet Shape
                 # Start Sequence    :1001
                 # Flare ID          :4 bit
@@ -119,11 +120,12 @@ class FlareDataWorker(Thread):
                 # CRC               :32bit
                 # End Sequence      :1010               
                 # Total Size        :120 bit
+                          
                 self.rpacket = self.rpacket >> 4
                 crcrec = self.rpacket & 0b11111111111111111111111111111111
                 #Calculate CRC and check if it's equal.
                 self.rpacket = self.rpacket >> 32
-                dataToCRC = self.rpacket & 0x00008FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+                dataToCRC = self.rpacket & 0x0000CFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
                 crc32_func = crcmod.mkCrcFun(0x104c11db7, initCrc=0, xorOut=0xFFFFFFFF)
                 crccalc = crc32_func(str(dataToCRC))
                 if crccalc!=crcrec:
@@ -169,7 +171,7 @@ class FlareDataWorker(Thread):
                 
                 self.rFlareData = self.rFlareData._replace(FlareID = self.rpacket & 0b1111)
                 self.rpacket = self.rpacket >> 4
-
+                
                 self.unpackGPS()
 
         def run(self):
@@ -198,7 +200,7 @@ class FlareDataWorker(Thread):
                                self.port.write(handshake)
                                response = self.port.read(7)
                                wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
-                               self.rpacket = int(self.port.read(54))
+                               self.rpacket = int(self.port.read(55))
                                self.gpsData = self.port.readline()
                                #self.gpsData = self.port.read(47)
                                print self.rpacket
