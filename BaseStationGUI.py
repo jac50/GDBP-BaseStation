@@ -10,7 +10,7 @@ import serial
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 EVT_UPDATECONNECTIONSTATUS_ID = wx.NewId()
-DataPacket = namedtuple("DataPacket","FlareID PrimBatteryVoltage AuxBatteryVoltage PrimBatteryCurrent AuxBatteryCurrent PrimBatteryPower AuxBatteryPower PrimDischargeCycles AuxDischargeCycles PrimBatteryTemp AuxBatteryTemp SystemTemp LEDLeft LEDRight Outside Altitude ParachuteStatus LEDStatus LEDBrightness OptoKineticStatus Acceleration ErrorStates")                
+DataPacket = namedtuple("DataPacket","FlareID PrimBatteryVoltage AuxBatteryVoltage PrimBatteryCurrent AuxBatteryCurrent PrimBatteryPower AuxBatteryPower PrimDischargeCycles AuxDischargeCycles PrimBatteryTemp AuxBatteryTemp SystemTemp LEDLeft LEDRight Outside Altitude ParachuteStatus LEDStatus LEDBrightness OptoKineticStatus Acceleration ErrorStates BaseTime BaseLong BaseLat")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
 
 
@@ -38,7 +38,8 @@ class UpdateConnectionStatus(wx.PyEvent):
 class FlareDataWorker(Thread):
         ExitCode = 0
         allowed = True
-        FlareData = DataPacket(1,40,5,30,5,1200,25,2,0,50,30,70,65,65,15,800,True,True,50,False, 25,0b0000000000000000)
+        FlareData = DataPacket(1,40,5,30,5,1200,25,2,0,50,30,70,65,65,15,800,True,True,50,False, 25,0b0000000000000000,0,0,0)
+        rFlareData = DataPacket(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
         port = serial.Serial() #9600, 8, N, 1
         port.port = 5 #Device is on Port 3. Zero Indexed. Port 6 on Netbook
         port.baudrate = 9600
@@ -49,6 +50,44 @@ class FlareDataWorker(Thread):
                 self.ExitCode = 0
                 self.rpacket = 0b0
                 self.gpsData = 0b0
+        def unpackGPS(self):
+                #----- Format of gpsDataArray -------
+                # Element 0 : Packet Type. In Normal operation it will be $GPGGA
+                # Element 1 : Time
+                #         2 : Latitude
+                #         3 : N/S Indicactor
+                #         4 : Longitude
+                #         5 : E/WIndicactor
+                #         6 : Position Fix Indicator
+                #         7 : Satellites Used
+                #         8 : HDOP
+                #         9 : MSL Altitude
+                #         10: Units
+                #         11: Geoid Seperation
+                #         12: Units
+                #         13: Age of Diff Corr.
+                #         14: Checksum
+                #         15: End of Message
+                
+                self.gpsDataArray = [x.strip() for x in self.gpsData.split(',')]
+                #Format Time
+                time_int = int(float(self.gpsDataArray[1]))
+                
+                time_list = list(str(time_int))
+                if len(time_list) == 5:
+                        time_list.insert(0,'0')
+                time_list.insert(2,':')
+                time_list.insert(5,':')
+                time_list.append(' (UTC)')
+                time_str = "".join(time_list)
+                
+                self.rFlareData = self.rFlareData._replace(BaseTime = time_str,
+                                                           BaseLat = self.gpsDataArray[2] + self.gpsDataArray[3],
+                                                           BaseLong = self.gpsDataArray[4] +self.gpsDataArray[5],
+                                                         )
+                
+                
+                
         def UnpackPacket(self):
                 # Packet Shape
                 # Start Sequence    :1001
@@ -79,30 +118,32 @@ class FlareDataWorker(Thread):
                         print "There has been an error. Discard Data"
                         return -1
                 # Need conditions to see when these are true or false when 1111 or 0000 
-                errorstate = self.rpacket & 0b1111111111
+                self.rFlareData = self.rFlareData._replace(ErrorStates = self.rpacket & 0b1111111111)
                 self.rpacket = self.rpacket >> 10
-                opto = self.rpacket & 0b1111            
+                self.rFlareData = self.rFlareData._replace(OptoKineticStatus = self.rpacket & 0b1111)            
                 self.rpacket = self.rpacket >> 4                                                                                                                                        
-                ledstatus = self.rpacket & 0b1111
+                self.rFlareData = self.rFlareData._replace(LEDStatus = self.rpacket & 0b1111)
                 self.rpacket = self.rpacket >> 4
-                parachute = self.rpacket & 0b1111
+                self.rFlareData = self.rFlareData._replace(ParachuteStatus = self.rpacket & 0b1111)
                 self.rpacket = self.rpacket >> 4
-                altitude = self.rpacket & 0b111111111111
+                self.rFlareData = self.rFlareData._replace(Altitude = self.rpacket & 0b111111111111)
                 self.rpacket = self.rpacket >> 12
-                SystemTemp = self.rpacket & 0b11111111
+                self.rFlareData = self.rFlareData._replace(SystemTemp = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
-                BatteryTemp = self.rpacket & 0b11111111
+                self.rFlareData = self.rFlareData._replace(PrimBatteryTemp = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
-                DischargeCycles = self.rpacket & 0b11111111
+                self.rFlareData = self.rFlareData._replace(PrimDischargeCycles = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
-                Power = self.rpacket & 0b1111111111111
+                self.rFlareData = self.rFlareData._replace(PrimBatteryPower = self.rpacket & 0b1111111111111)
                 self.rpacket = self.rpacket >> 12
-                Current = self.rpacket & 0b11111111
+                self.rFlareData = self.rFlareData._replace(PrimBatteryCurrent = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
-                Voltage = self.rpacket & 0b11111111
+                self.rFlareData = self.rFlareData._replace(PrimBatteryVoltage = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
-                FlareID = self.rpacket & 0b1111
+                self.rFlareData = self.rFlareData._replace(FlareID = self.rpacket & 0b1111)
                 self.rpacket = self.rpacket >> 4
+
+                self.unpackGPS()
 
         def run(self):
                 while (self.ExitCode == 0):                 
@@ -115,8 +156,8 @@ class FlareDataWorker(Thread):
                         if error == -1:
                                 print "Packet is Ignored"
                                 continue
-                        wx.PostEvent(self.wxObject,ResultEvent(self.FlareData)) #send to GUI                                               
-                        time.sleep(1)
+                        wx.PostEvent(self.wxObject,ResultEvent(self.rFlareData))#send to GUI                                               
+                        #time.sleep(0.5)
         def ReceiveData(self):
                # ---- Function used to retrieve and format the received signal correctly ----
                if (self.allowed):
@@ -312,6 +353,9 @@ class MyFrame(wx.Frame):
                 else:
                         self.OptoKineticStatusValue.SetLabel('OFF')
                         self.OptoKineticBtn.SetLabel('Turn On')
+                self.BaseLatValue.SetLabel(str(t.BaseLat))
+                self.BaseLongValue.SetLabel(str(t.BaseLong))
+                self.TimeValue.SetLabel(str(t.BaseTime))
                 self.StatusBar.SetStatusText('Ready')
                 self.updateGUI(0,t.ErrorStates)
         def SendCommandFnc(self,evt):
@@ -483,7 +527,11 @@ class MyFrame(wx.Frame):
                 self.ConnectionStatusValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(420,5),size=(100,15))
                 self.ConnectionStatusLabel.SetFont(standardfont)
                 self.ConnectionStatusValue.SetFont(standardfont)
-                
+
+                #GPS Status
+                self.GPSStatusLabel = wx.StaticText(panel,label = 'GPS Status:',pos = (530,5))
+                self.GPSStatusValue = wx.StaticText(panel,style = wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(590,5),size=(100,15))
+                                                    
 
                 #Event Listeners
                 
@@ -499,9 +547,12 @@ class MyFrame(wx.Frame):
                 #Machine ID
                 self.FlareIDLabel = wx.StaticText(panel,label = 'Flare ID:', pos=(10,5))
                 self.FlareIDValue= wx.ComboBox(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE ,pos=(70,2),size=(100,15))
-                #Currently staticText. Will make it a dropdown menu.
                 self.FlareIDLabel.SetFont(standardfont)
                 self.FlareIDValue.SetFont(standardfont) 
+                #Time
+
+                self.TimeLabel = wx.StaticText(panel,label = 'Time:', pos = (180,5))
+                self.TimeValue = wx.StaticText(panel,style = wx.ALIGN_CENTRE, pos=(210,5), size = (50,15))
                 #Status Bar
                 self.StatusBar = self.CreateStatusBar()
                 self.StatusBar.SetStatusText('Ready')
