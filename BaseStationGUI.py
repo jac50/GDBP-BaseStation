@@ -1,20 +1,20 @@
 # -*- coding: cp1252 -*-
 from threading import *
-import time
 import wx
 from collections import namedtuple
 import crcmod
 import serial
 
-
+#---- Declare new Event IDs so Data can be passed to the GUI thread from other threads -----
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 EVT_UPDATECONNECTIONSTATUS_ID = wx.NewId()
 EVT_UPDATEGPSLOCK_ID = wx.NewId()
+
 DataPacket = namedtuple("DataPacket","FlareID PrimBatteryVoltage AuxBatteryVoltage PrimBatteryCurrent AuxBatteryCurrent PrimBatteryPower AuxBatteryPower PrimDischargeCycles AuxDischargeCycles PrimBatteryTemp AuxBatteryTemp SystemTemp LEDLeftTemp LEDRightTemp OutsideTemp Altitude ParachuteStatus LEDStatus LEDBrightness OptoKineticStatus Acceleration ErrorStates BaseTime BaseLong BaseLat")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
 
-
+#---- Classes and Functions used for the new Event IDs ----
 def EVT_RESULT(win,func):
         win.Connect(-1,01,EVT_RESULT_ID,func)
 def EVT_UPDATESTATUS(win,func):        
@@ -43,6 +43,7 @@ class UpdateGPSLock(wx.PyEvent):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_UPDATEGPSLOCK_ID)
                 self.data = data
+
 class FlareDataWorker(Thread):
         ExitCode = 0
         allowed = True
@@ -77,18 +78,18 @@ class FlareDataWorker(Thread):
                 #         14: Checksum
                 #         15: End of Message
                 
-                self.gpsDataArray = [x.strip() for x in self.gpsData.split(',')]
+                self.gpsDataArray = [x.strip() for x in self.gpsData.split(',')] # Strips commas from the CSV line received by the GPS module
 
                 # ---- Format Time -----
-                time_int = int(float(self.gpsDataArray[1]))
+                time_int = int(float(self.gpsDataArray[1])) # Essentially floors the time to the nearest second
                 
-                time_list = list(str(time_int))
-                if len(time_list) == 5:
-                        time_list.insert(0,'0')
-                time_list.insert(2,':')
+                time_list = list(str(time_int)) #Seperates the time into a list. For example, 104256 (10:42:56) will be '1','0','4','2','5','6'
+                if len(time_list) == 5: # If the time starts with a 0, it will be dropped (0940 for example). If length == 5, add an extra 0 to make it 6 long
+                        time_list.insert(0,'0') #Add an extra 0 so the time is 
+                time_list.insert(2,':') #Adds in the colon seperators in the time. Inserts the : before time_list[2]
                 time_list.insert(5,':')
-                time_list.append(' (UTC)')
-                time_str = "".join(time_list)
+                time_list.append(' (UTC)') 
+                time_str = "".join(time_list) #Converts list to a string
                 
                 self.rFlareData = self.rFlareData._replace(BaseTime = time_str,
                                                            BaseLat = self.gpsDataArray[2] + self.gpsDataArray[3],
@@ -96,7 +97,7 @@ class FlareDataWorker(Thread):
                                                          )
                 
                 # Check if there is GPS Lock
-                if self.gpsDataArray[2] == '':
+                if self.gpsDataArray[2] == '': #If a null string, GPS lock has not been achieved
                         wx.PostEvent(self.wxObject,UpdateGPSLock(False))
                 else:
                         wx.PostEvent(self.wxObject,UpdateGPSLock(True))
@@ -104,22 +105,27 @@ class FlareDataWorker(Thread):
         def UnpackPacket(self):
                 
                 # Packet Shape
-                # Start Sequence    :1001
-                # Flare ID          :4 bit
-                # Voltage           :8 bit
-                # Current           :8 bit
-                # Power             :12 bit
-                # DischargeCycles   :8 bit
-                # BatteryTemp       :8 bit
-                # SystemTemp        :8 bit
-                # Altitude          :12 bit
-                # ParachuteStatus   :4 bit
-                # LEDStatus         :4 bit
-                # OptoKineticStatus :4 bit                      
-                # ErrorStateFlags   :10 bit
-                # CRC               :32bit
-                # End Sequence      :1010               
-                # Total Size        :120 bit
+                # Start Sequence           :1001
+                # Flare ID                 :4 bit
+                # Primary Voltage          :8 bit
+                # Aux. Voltage             :8 bit
+                # Primary Current          :8 bit
+                # Aux. Current             :8 bit                
+                # PrimaryDischargeCycles   :8 bit
+                # PrimaryBatteryTemp       :8 bit
+                # AuxBatteryTemp           :8 bit
+                # SystemTemp               :8 bit
+                # LED Left Wing Temp       :8 bit
+                # LED Right Wing Temp      :8 bit
+                # Outside Temp             :8 bit
+                # Altitude                 :12 bit
+                # ParachuteStatus          :4 bit
+                # LEDStatus                :4 bit
+                # OptoKineticStatus        :4 bit                      
+                # ErrorStateFlags          :10 bit
+                # CRC                      :32bit
+                # End Sequence             :1010               
+                # Total Size               :166 bit
                           
                 self.rpacket = self.rpacket >> 4
                 crcrec = self.rpacket & 0b11111111111111111111111111111111
@@ -167,29 +173,24 @@ class FlareDataWorker(Thread):
                 self.rFlareData = self.rFlareData._replace(AuxBatteryVoltage = self.rpacket & 0b11111111)
                 self.rpacket = self.rpacket >> 8
                 self.rFlareData = self.rFlareData._replace(PrimBatteryVoltage = self.rpacket & 0b11111111)
-                self.rpacket = self.rpacket >> 8
-                
+                self.rpacket = self.rpacket >> 8                
                 self.rFlareData = self.rFlareData._replace(FlareID = self.rpacket & 0b1111)
-                self.rpacket = self.rpacket >> 4
-                
+                self.rpacket = self.rpacket >> 4                
                 self.unpackGPS()
 
         def run(self):
-                while (self.ExitCode == 0):                 
-                        #Receive Data
-                        #unpack packet and add to DataPacket Variable declared above.
-                        #self.FlareData = self.FlareData._replace(DischargeCycles = self.FlareData.DischargeCycles + 1) #Used for Testing
-                        
-                        self.ReceiveData() #commented until transceiver has been built
+                while (self.ExitCode == 0):   
+                        self.ReceiveData() 
                         error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
                                 continue
                         wx.PostEvent(self.wxObject,ResultEvent(self.rFlareData))#send to GUI                                               
-                        #time.sleep(0.5)
+                        
         def ReceiveData(self):
                # ---- Function used to retrieve and format the received signal correctly ----
-               if (self.allowed):
+        
+               if (self.allowed): #self.allowed is a variable used when a command is waiting to be sent
                        try:
                                self.port.open()
                        except serial.SerialException as e:
@@ -202,9 +203,6 @@ class FlareDataWorker(Thread):
                                wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
                                self.rpacket = int(self.port.read(55))
                                self.gpsData = self.port.readline()
-                               #self.gpsData = self.port.read(47)
-                               print self.rpacket
-                               print self.gpsData
                                self.port.close()
         def ToggleAllowed(self):
                 if self.allowed:
