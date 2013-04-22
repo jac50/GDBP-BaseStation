@@ -11,7 +11,7 @@ EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 EVT_UPDATECONNECTIONSTATUS_ID = wx.NewId()
 EVT_UPDATEGPSLOCK_ID = wx.NewId()
-EVT_UPDATEMAP_ID = wx.NewId()
+EVT_UPDATEMAPGUI_ID = wx.NewId()
 
 DataPacket = namedtuple("DataPacket","FlareID PrimBatteryVoltage AuxBatteryVoltage PrimBatteryCurrent AuxBatteryCurrent PrimBatteryPower AuxBatteryPower PrimDischargeCycles AuxDischargeCycles PrimBatteryTemp AuxBatteryTemp SystemTemp LEDLeftTemp LEDRightTemp OutsideTemp Altitude ParachuteStatus LEDStatus LEDBrightness OptoKineticStatus Acceleration ErrorStates BaseTime BaseLong BaseLat")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
@@ -25,8 +25,8 @@ def EVT_UPDATECONNECTIONSTATUS(win,func):
         win.Connect(-1,01,EVT_UPDATECONNECTIONSTATUS_ID,func)
 def EVT_UPDATEGPSLOCK(win,func):
         win.Connect(-1,01,EVT_UPDATEGPSLOCK_ID,func)
-def EVT_UPDATEMAP(win,func):
-        win.Connect(-1,01,EVT_UPDATEMAP_ID,func)
+def EVT_UPDATEMAPGUI(win,func):
+        win.Connect(-1,01,EVT_UPDATEMAPGUI_ID,func)
 class ResultEvent(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
@@ -47,10 +47,10 @@ class UpdateGPSLock(wx.PyEvent):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_UPDATEGPSLOCK_ID)
                 self.data = data
-class UpdateMap(wx.PyEvent):
+class UpdateMapGUI(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
-                self.SetEventType(EVT_UPDATEMAP_ID)
+                self.SetEventType(EVT_UPDATEMAPGUI_ID)
                 self.data = data
 class FlareDataWorker(Thread):
         ExitCode = 0
@@ -60,9 +60,10 @@ class FlareDataWorker(Thread):
         port = serial.Serial() #9600, 8, N, 1
         port.port = 5 #Device is on Port 3. Zero Indexed. Port 6 on Netbook
         port.baudrate = 9600
-        def __init__(self,wxObject):
+        def __init__(self,wxObject,wxObjectMap):
                 Thread.__init__(self)
                 self.wxObject = wxObject
+                self.wxObjectMap = wxObjectMap
                 self.start()
                 self.ExitCode = 0
                 self.rpacket = 0b0
@@ -107,10 +108,13 @@ class FlareDataWorker(Thread):
                 # Check if there is GPS Lock
                 if self.gpsDataArray[2] == '': #If a null string, GPS lock has not been achieved
                         wx.PostEvent(self.wxObject,UpdateGPSLock(False))
+                        print self.gpsData
                 else:
                         wx.PostEvent(self.wxObject,UpdateGPSLock(True))
-                print self.gpsData
-                wx.PostEvent(self.wxObject,UpdateMap(self.gpsDataArray))        
+                        print "have lock"
+                        wx.PostEvent(self.wxObjectMap,UpdateMapGUI(self.gpsDataArray))
+                
+                        
         def UnpackPacket(self):
                 
                 # Packet Shape
@@ -213,6 +217,7 @@ class FlareDataWorker(Thread):
                                self.rpacket = int(self.port.read(55))
                                self.gpsData = self.port.readline()
                                
+                               
                                self.port.close()
         def ToggleAllowed(self):
                 if self.allowed:
@@ -245,13 +250,14 @@ class ControlWorker(Thread):
                 # Packet Shape
                 # Start flag          : 1100
                 # LEDCommands Flag    : 2 bit
-                # Light Intenisty Flag : 4 bit
+                # Light Intensity Flag : 4 bit
                 # OptoKineticFlag     : 2 bit
                 # Directionality Flag : 8 bit
                 # Parachute Flag      : 2 bit
                 # CRC                :
                 # End Flag           : 0011
-
+               # Need to have if statements for LED command, parachute, and optokinetic.
+               # if LED command == True: + 11 else 00
                self.cpacket = 0b1100
                self.cpacket =  self.cpacket << 2
                self.cpacket = self.cpacket + self.Commands.LEDCommand
@@ -273,7 +279,8 @@ class ControlWorker(Thread):
                self.cpacket = self.cpacket + 0b0011
         def SendPacket(self):
                 try:
-                       self.port.open()
+
+                      self.port.open()
                 except serial.SerialException as e :
                        print "Error({0}): {1}".format(e.errno,e.strerror)
                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
@@ -344,12 +351,13 @@ class MyFrame(wx.Frame):
    
         def openMap(self,evt):
                 self.StatusBar.SetStatusText('Localisation Map has been opened')
-                self.MapWindow.Show()                
+                self.MapWindow.Show()
+                
         def OnStart(self,event):
                 if self.StartButton.GetLabel() == "Start":
                         if not self.worker:
                                 self.StatusBar.SetStatusText('Starting to collect data')
-                                self.worker=FlareDataWorker(self)
+                                self.worker=FlareDataWorker(self,self.MapWindow)
                                 self.StartButton.SetLabel('Stop')                                               
                 elif self.StartButton.GetLabel() == "Stop":
                         self.StatusBar.SetStatusText('Updating Stopped')
@@ -459,13 +467,22 @@ class MyFrame(wx.Frame):
 
                 self.LocationBox = wx.StaticBox(panel,label = 'Location Information',pos=(570,20),size=(170,120))
                 self.BaseLatLabel = wx.StaticText(panel,label = 'Base Latitude',pos = (580,40),style = wx.ALIGN_CENTRE)
-                self.BaseLatValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,40),size=(50,15))
+                self.BaseLatValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,40),size=(70,15))
                 self.BaseLongLabel = wx.StaticText(panel,label = 'Base Longitude',pos = (580,60),style = wx.ALIGN_CENTRE)
-                self.BaseLongValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,60),size=(50,15))
+                self.BaseLongValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,60),size=(70,15))
                 self.FlareLatLabel = wx.StaticText(panel,label = 'Flare Latitude',pos = (580,80),style = wx.ALIGN_CENTRE)
-                self.FlareLatValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,80),size=(50,15))
+                self.FlareLatValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,80),size=(70,15))
                 self.FlareLongLabel = wx.StaticText(panel,label = 'Flare Longitude',pos = (580,100),style = wx.ALIGN_CENTRE)
-                self.FlareLongValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,100),size=(50,15))
+                self.FlareLongValue = wx.StaticText(panel,style = wx.ALIGN_CENTER | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos = (660,100),size=(70,15))
+
+                self.BaseLatLabel.SetFont(standardfont)
+                self.BaseLatValue.SetFont(standardfont)
+                self.BaseLongLabel.SetFont(standardfont)
+                self.BaseLongValue.SetFont(standardfont)
+                self.FlareLatLabel.SetFont(standardfont)
+                self.FlareLatValue.SetFont(standardfont)
+                self.FlareLongLabel.SetFont(standardfont)
+                self.FlareLongValue.SetFont(standardfont)
                 
                 
                 
@@ -769,8 +786,9 @@ class MapFrame(wx.Frame):
         def __init__(self):
                 wx.Frame.__init__(self,wx.GetApp().TopWindow,title = self.title,size=(800,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
                 self.initUI()
-                EVT_UPDATEMAP(self,self.UpdateMap)
+                EVT_UPDATEMAPGUI(self,self.UpdateMapGUI)
                 self.generateURL()
+                
                 self.updateMap()
         def initUI(self):
                 panel = wx.Panel(self)
@@ -785,19 +803,21 @@ class MapFrame(wx.Frame):
                 self.baseAltitudeValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(690,30),size=(50,15))
                 
 
-                flareBox= wx.StaticBox(panel,label = 'Flare Information',pos = (620,70),size = (135,50))
+                flareBox= wx.StaticBox(panel,label = 'Flare Information (F)',pos = (620,70),size = (135,50))
                 baseAltitudeLabel = wx.StaticText(panel,label = 'Altitude (m)',pos = (630,95),style = wx.ALIGN_CENTRE)
                 self.baseAltitudeValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(690,95),size=(50,15))
                 
                 
-                
-        def UpdateMap(self,evt):
+        def UpdateMapGUI(self,msg):
+                print "YES"
                 t = msg.data
-                t[2] = t[2] / 100;
-                t[4] = t[4] / 100;
+                t[2] = float(t[2]) / 100;
+                print t[2]
+                t[4] = float(t[4]) / 100;
+                print t[4]
                 markerBase = str(t[2]) + ',' + str(t[4])
                 generateURL(markerBase, markerFlare)
-                
+                updateMap()
                 
                 
         def generateURL(self,markersBase="51.3794,-2.3656",markersFlare="51.3740,-2.3656"): #Default values used for testing
