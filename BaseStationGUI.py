@@ -4,12 +4,14 @@ import wx
 from collections import namedtuple
 import crcmod
 import serial
+import urllib
 
 #---- Declare new Event IDs so Data can be passed to the GUI thread from other threads -----
 EVT_RESULT_ID=wx.NewId()
 EVT_UPDATESTATUS_ID = wx.NewId()
 EVT_UPDATECONNECTIONSTATUS_ID = wx.NewId()
 EVT_UPDATEGPSLOCK_ID = wx.NewId()
+EVT_UPDATEMAP_ID = wx.NewId()
 
 DataPacket = namedtuple("DataPacket","FlareID PrimBatteryVoltage AuxBatteryVoltage PrimBatteryCurrent AuxBatteryCurrent PrimBatteryPower AuxBatteryPower PrimDischargeCycles AuxDischargeCycles PrimBatteryTemp AuxBatteryTemp SystemTemp LEDLeftTemp LEDRightTemp OutsideTemp Altitude ParachuteStatus LEDStatus LEDBrightness OptoKineticStatus Acceleration ErrorStates BaseTime BaseLong BaseLat")                
 ControlParameters = namedtuple("ControlParameters", "LEDCommand LEDIntensity OptoKinetic Directionality ParachuteCommand")
@@ -23,6 +25,8 @@ def EVT_UPDATECONNECTIONSTATUS(win,func):
         win.Connect(-1,01,EVT_UPDATECONNECTIONSTATUS_ID,func)
 def EVT_UPDATEGPSLOCK(win,func):
         win.Connect(-1,01,EVT_UPDATEGPSLOCK_ID,func)
+def EVT_UPDATEMAP(win,func):
+        win.Connect(-1,01,EVT_UPDATEMAP_ID,func)
 class ResultEvent(wx.PyEvent):
         def __init__(self,data):
                 wx.PyEvent.__init__(self)
@@ -43,7 +47,11 @@ class UpdateGPSLock(wx.PyEvent):
                 wx.PyEvent.__init__(self)
                 self.SetEventType(EVT_UPDATEGPSLOCK_ID)
                 self.data = data
-
+class UpdateMap(wx.PyEvent):
+        def __init__(self,data):
+                wx.PyEvent.__init__(self)
+                self.SetEventType(EVT_UPDATEMAP_ID)
+                self.data = data
 class FlareDataWorker(Thread):
         ExitCode = 0
         allowed = True
@@ -102,7 +110,7 @@ class FlareDataWorker(Thread):
                 else:
                         wx.PostEvent(self.wxObject,UpdateGPSLock(True))
                 print self.gpsData
-                
+                wx.PostEvent(self.wxObject,UpdateMap(self.gpsDataArray))        
         def UnpackPacket(self):
                 
                 # Packet Shape
@@ -286,6 +294,7 @@ class MyFrame(wx.Frame):
                 self.controlparameters = ControlParameters(False,False,False,0,0)
                 self.InitUI()
                 self.populateGUI()
+                self.MapWindow = MapFrame()
                 EVT_RESULT(self,self.updateDisplay)
                 EVT_UPDATESTATUS(self,self.UpdateStatus)
                 EVT_UPDATECONNECTIONSTATUS(self,self.UpdateConnectionStatus)
@@ -334,8 +343,8 @@ class MyFrame(wx.Frame):
                         self.OptoKineticBtn.SetLabel('Turn On')
    
         def openMap(self,evt):
-                # ------ Need to work on this --------
                 self.StatusBar.SetStatusText('Localisation Map has been opened')
+                self.MapWindow.Show()                
         def OnStart(self,event):
                 if self.StartButton.GetLabel() == "Start":
                         if not self.worker:
@@ -755,7 +764,52 @@ class MyFrame(wx.Frame):
                 else:
                         self.GPSStatusValue.SetBackgroundColour('#00FF00')
                 self.Refresh() # have to force a refresh or the colours won't update
-        
+class MapFrame(wx.Frame):
+        title = "Localisation Map Window"
+        def __init__(self):
+                wx.Frame.__init__(self,wx.GetApp().TopWindow,title = self.title,size=(800,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+                self.initUI()
+                EVT_UPDATEMAP(self,self.UpdateMap)
+                self.generateURL()
+                self.updateMap()
+        def initUI(self):
+                panel = wx.Panel(self)
+                panel.SetBackgroundColour('#FFFFFF')
+                imageFile = 'C:\Users\James\Documents\Github\TestImage.jpg'
+                png = wx.Image(imageFile,wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+                self.imageMap = wx.StaticBitmap(panel,-1,png,(10,5),(png.GetWidth(),png.GetHeight()),style = wx.BORDER_SIMPLE)
+
+                #Legend
+                baseStationBox = wx.StaticBox(panel, label = 'Base Station Information (B)',pos = (620,5),size=(150,50))
+                baseAltitudeLabel = wx.StaticText(panel,label = 'Altitude (m)',pos = (630,30),style = wx.ALIGN_CENTRE)
+                self.baseAltitudeValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(690,30),size=(50,15))
+                
+
+                flareBox= wx.StaticBox(panel,label = 'Flare Information',pos = (620,70),size = (135,50))
+                baseAltitudeLabel = wx.StaticText(panel,label = 'Altitude (m)',pos = (630,95),style = wx.ALIGN_CENTRE)
+                self.baseAltitudeValue = wx.StaticText(panel,style=wx.ALIGN_CENTRE | wx.BORDER_SIMPLE | wx.ST_NO_AUTORESIZE,pos=(690,95),size=(50,15))
+                
+                
+                
+        def UpdateMap(self,evt):
+                t = msg.data
+                t[2] = t[2] / 100;
+                t[4] = t[4] / 100;
+                markerBase = str(t[2]) + ',' + str(t[4])
+                generateURL(markerBase, markerFlare)
+                
+                
+                
+        def generateURL(self,markersBase="51.3794,-2.3656",markersFlare="51.3740,-2.3656"): #Default values used for testing
+                url = "http://maps.googleapis.com/maps/api/staticmap?&zoom=13&size=600x300&maptype=terrain&key=AIzaSyDwM32NaJvF8682ThC_5zJp3V2deqHfyGo&sensor=true"
+                url+="&markers=color:blue%7Clabel:B%7C" + markersBase
+                url+= "&markers=color:red%7Clabel:F%7C" + markersFlare
+                urllib.urlretrieve(url,'NewMapV2.png')
+        def updateMap(self):
+                directory = 'C:\Users\James\Documents\Github\GDBP-BaseStation\NewMapV2.png'
+                newMap = wx.Image(directory,wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+                self.imageMap.SetBitmap(newMap)
+                
 if __name__ == '__main__':
     app = wx.App(0)
     window = MyFrame(None, title = "Base Station V1") 
