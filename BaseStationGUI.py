@@ -111,7 +111,6 @@ class FlareDataWorker(Thread):
                         print self.gpsData
                 else:
                         wx.PostEvent(self.wxObject,UpdateGPSLock(True))
-                        print "have lock"
                         wx.PostEvent(self.wxObjectMap,UpdateMapGUI(self.gpsDataArray))
                 
                         
@@ -786,17 +785,14 @@ class MapFrame(wx.Frame):
         def __init__(self):
                 wx.Frame.__init__(self,wx.GetApp().TopWindow,title = self.title,size=(800,350),style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
                 self.initUI()
-                EVT_UPDATEMAPGUI(self,self.UpdateMapGUI)
-                self.generateURL()
-                
-                self.updateMap()
+                EVT_UPDATEMAPGUI(self,self.UpdateMapGUI)                
         def initUI(self):
                 panel = wx.Panel(self)
                 panel.SetBackgroundColour('#FFFFFF')
                 imageFile = 'C:\Users\James\Documents\Github\TestImage.jpg'
                 png = wx.Image(imageFile,wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                 self.imageMap = wx.StaticBitmap(panel,-1,png,(10,5),(png.GetWidth(),png.GetHeight()),style = wx.BORDER_SIMPLE)
-
+                self.imageMap.Hide()
                 #Legend
                 baseStationBox = wx.StaticBox(panel, label = 'Base Station Information (B)',pos = (620,5),size=(150,50))
                 baseAltitudeLabel = wx.StaticText(panel,label = 'Altitude (m)',pos = (630,30),style = wx.ALIGN_CENTRE)
@@ -809,15 +805,18 @@ class MapFrame(wx.Frame):
                 
                 
         def UpdateMapGUI(self,msg):
-                print "YES"
                 t = msg.data
                 t[2] = float(t[2]) / 100;
-                print t[2]
+                if t[3] == "S":
+                         t[2] = - t[2]
                 t[4] = float(t[4]) / 100;
-                print t[4]
+                if t[5] == "W":
+                        t[4] = - t[4]
+
                 markerBase = str(t[2]) + ',' + str(t[4])
-                generateURL(markerBase, markerFlare)
-                updateMap()
+                markerFlare = ''
+                self.generateURL(markerBase, markerFlare)
+                self.updateMap()
                 
                 
         def generateURL(self,markersBase="51.3794,-2.3656",markersFlare="51.3740,-2.3656"): #Default values used for testing
@@ -829,6 +828,7 @@ class MapFrame(wx.Frame):
                 directory = 'C:\Users\James\Documents\Github\GDBP-BaseStation\NewMapV2.png'
                 newMap = wx.Image(directory,wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                 self.imageMap.SetBitmap(newMap)
+                self.imageMap.Show()
                 
 if __name__ == '__main__':
     app = wx.App(0)
