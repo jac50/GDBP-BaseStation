@@ -5,6 +5,7 @@ from collections import namedtuple
 import crcmod
 import serial
 import urllib
+import time
 
 #---- Declare new Event IDs so Data can be passed to the GUI thread from other threads -----
 EVT_RESULT_ID=wx.NewId()
@@ -191,22 +192,25 @@ class FlareDataWorker(Thread):
                 self.unpackGPS()
 
         def run(self):
-                while (self.ExitCode == 0):   
-                        self.ReceiveData() 
+                while (self.ExitCode == 0 and self.allowed):   
+                        flag = self.ReceiveData()
+                        if flag == False:
+                                continue
+                        
                         error = self.UnpackPacket()
                         if error == -1:
                                 print "Packet is Ignored"
                                 continue
-                        wx.PostEvent(self.wxObject,ResultEvent(self.rFlareData))#send to GUI                                               
+                        wx.PostEvent(self.wxObject,ResultEvent(self.rFlareData))#send to GUI
+                        
                         
         def ReceiveData(self):
                # ---- Function used to retrieve and format the received signal correctly ----
         
-               if (self.allowed): #self.allowed is a variable used when a command is waiting to be sent
+                if (self.allowed): #self.allowed is a variable used when a command is waiting to be sent
                        try:
                                self.port.open()
                        except serial.SerialException as e:
-                               print "Error({0}): {1}".format(e.errno,e.strerror)
                                wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
                        else:
                                handshake = '0110001'
@@ -214,15 +218,15 @@ class FlareDataWorker(Thread):
                                response = self.port.read(7)
                                wx.PostEvent(self.wxObject,UpdateConnectionStatus(True))
                                self.rpacket = int(self.port.read(55))
-                               self.gpsData = self.port.readline()
-                               
-                               
+                               self.gpsData = self.port.readline()                                                       
                                self.port.close()
+                               return True
+                return False
         def ToggleAllowed(self):
                 if self.allowed:
-                        self.allowed = False
-                else:
                         self.allowed = True
+                else:
+                        self.allowed = False
         
         def Abort(self):
                 self.ExitCode = 1
@@ -281,7 +285,7 @@ class ControlWorker(Thread):
 
                       self.port.open()
                 except serial.SerialException as e :
-                       print "Error({0}): {1}".format(e.errno,e.strerror)
+                       print "No CAn Do"
                        wx.PostEvent(self.wxObject,UpdateConnectionStatus(False))
                 else:
                         handshake = '1001110'
@@ -413,11 +417,18 @@ class MyFrame(wx.Frame):
                 self.updateGUI(0,t.ErrorStates)
         def SendCommandFnc(self,evt):
                 self.StatusBar.SetStatusText('Collating Commands to Send')
-                if self.worker != None:             
+                if self.worker == None:            
                         self.worker.ToggleAllowed()
+                        print self.worker.allowed
                 self.controlthread = ControlWorker(self,self.controlparameters)
-                if self.worker !=None:
-                        self.worker.ToggleAllowed()
+                while self.controlthread.isAlive():
+                        print "get out please"
+                        continue
+                self.worker.ToggleAllowed()
+                print self.worker.allowed
+                
+                        
+                        
                 self.StatusBar.SetStatusText('Commands Sent to Background Thread')
                 
                 #Logic to Disable buttons after commands have been sent
@@ -819,10 +830,11 @@ class MapFrame(wx.Frame):
                 self.updateMap()
                 
                 
-        def generateURL(self,markersBase="51.3794,-2.3656",markersFlare="51.3740,-2.3656"): #Default values used for testing
+        def generateURL(self,markersBase,markersFlare): #Default values used for testing
                 url = "http://maps.googleapis.com/maps/api/staticmap?&zoom=13&size=600x300&maptype=terrain&key=AIzaSyDwM32NaJvF8682ThC_5zJp3V2deqHfyGo&sensor=true"
                 url+="&markers=color:blue%7Clabel:B%7C" + markersBase
                 url+= "&markers=color:red%7Clabel:F%7C" + markersFlare
+                print url
                 urllib.urlretrieve(url,'NewMapV2.png')
         def updateMap(self):
                 directory = 'C:\Users\James\Documents\Github\GDBP-BaseStation\NewMapV2.png'
